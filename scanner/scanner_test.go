@@ -25,5 +25,25 @@ func TestScanTokens(t *testing.T) {
 	if tokenSlice[2].TokenType != tokens.EOF {
 		t.Errorf("Last token should be of type %v, was %v", tokens.EOF, tokenSlice[2].TokenType)
 	}
+}
 
+func TestScanTokensWithMultipleCharacters(t *testing.T) {
+	bangTokenSlice := ScanTokens("!", &errorreport.ErrorReport{})
+	bangEqualTokenSlice := ScanTokens("!=", &errorreport.ErrorReport{})
+
+	if len(bangTokenSlice) != 2 {
+		t.Errorf("len(bangTokenSlice) should be 2, was %d", len(bangTokenSlice))
+	}
+
+	if len(bangEqualTokenSlice) != 2 {
+		t.Errorf("len(bangEqualTokenSlice) should be 2, was %d", len(bangEqualTokenSlice))
+	}
+
+	if bangTokenSlice[0].TokenType != tokens.Bang {
+		t.Errorf("bangTokenSlice token should be of type %v, was %v", tokens.Bang, bangTokenSlice[0].TokenType)
+	}
+
+	if bangEqualTokenSlice[0].TokenType != tokens.BangEqual {
+		t.Errorf("bangEqualTokenSlice token should be of type %v, was %v", tokens.BangEqual, bangEqualTokenSlice[0].TokenType)
+	}
 }

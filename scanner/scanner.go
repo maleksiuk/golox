@@ -62,6 +62,30 @@ func scanToken(location *sourceLocation, runes []rune, tokenSlice *[]tokens.Toke
 		addToken(tokenSlice, tokens.Semicolon)
 	case '*':
 		addToken(tokenSlice, tokens.Star)
+	case '!':
+		if match('=', location, runes) {
+			addToken(tokenSlice, tokens.BangEqual)
+		} else {
+			addToken(tokenSlice, tokens.Bang)
+		}
+	case '=':
+		if match('=', location, runes) {
+			addToken(tokenSlice, tokens.EqualEqual)
+		} else {
+			addToken(tokenSlice, tokens.Equal)
+		}
+	case '<':
+		if match('=', location, runes) {
+			addToken(tokenSlice, tokens.LessEqual)
+		} else {
+			addToken(tokenSlice, tokens.Less)
+		}
+	case '>':
+		if match('=', location, runes) {
+			addToken(tokenSlice, tokens.GreaterEqual)
+		} else {
+			addToken(tokenSlice, tokens.Greater)
+		}
 	default:
 		errorReport.Report(location.Line, "", "Unexpected character.")
 	}
@@ -69,4 +93,17 @@ func scanToken(location *sourceLocation, runes []rune, tokenSlice *[]tokens.Toke
 
 func addToken(tokenSlice *[]tokens.Token, tokenType tokens.TokenType) {
 	*tokenSlice = append(*tokenSlice, tokens.Token{TokenType: tokenType})
+}
+
+func match(expected rune, location *sourceLocation, runes []rune) bool {
+	if location.atEnd(runes) {
+		return false
+	}
+
+	if runes[location.Current] != expected {
+		return false
+	}
+
+	location.Current++
+	return true
 }
