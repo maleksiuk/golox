@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"github.com/maleksiuk/golox/errorreport"
 	"github.com/maleksiuk/golox/tokens"
 )
 
@@ -19,7 +20,7 @@ func (location *sourceLocation) beginNewLexeme() {
 }
 
 // ScanTokens extracts tokens from a string of Lox code
-func ScanTokens(source string) []tokens.Token {
+func ScanTokens(source string, errorReport *errorreport.ErrorReport) []tokens.Token {
 	location := sourceLocation{Line: 1}
 	runes := []rune(source)
 
@@ -28,7 +29,7 @@ func ScanTokens(source string) []tokens.Token {
 
 	for !location.atEnd(runes) {
 		location.beginNewLexeme()
-		scanToken(&location, runes, &tokenSlice)
+		scanToken(&location, runes, &tokenSlice, errorReport)
 	}
 
 	addToken(&tokenSlice, tokens.EOF)
@@ -36,7 +37,7 @@ func ScanTokens(source string) []tokens.Token {
 	return tokenSlice
 }
 
-func scanToken(location *sourceLocation, runes []rune, tokenSlice *[]tokens.Token) {
+func scanToken(location *sourceLocation, runes []rune, tokenSlice *[]tokens.Token, errorReport *errorreport.ErrorReport) {
 	r := runes[location.Current]
 	location.Current++
 
@@ -45,6 +46,24 @@ func scanToken(location *sourceLocation, runes []rune, tokenSlice *[]tokens.Toke
 		addToken(tokenSlice, tokens.LeftParen)
 	case ')':
 		addToken(tokenSlice, tokens.RightParen)
+	case '{':
+		addToken(tokenSlice, tokens.LeftBrace)
+	case '}':
+		addToken(tokenSlice, tokens.RightBrace)
+	case ',':
+		addToken(tokenSlice, tokens.Comma)
+	case '.':
+		addToken(tokenSlice, tokens.Dot)
+	case '-':
+		addToken(tokenSlice, tokens.Minus)
+	case '+':
+		addToken(tokenSlice, tokens.Plus)
+	case ';':
+		addToken(tokenSlice, tokens.Semicolon)
+	case '*':
+		addToken(tokenSlice, tokens.Star)
+	default:
+		errorReport.Report(location.Line, "", "Unexpected character.")
 	}
 }
 

@@ -3,11 +3,12 @@ package scanner
 import (
 	"testing"
 
+	"github.com/maleksiuk/golox/errorreport"
 	"github.com/maleksiuk/golox/tokens"
 )
 
 func TestScanTokens(t *testing.T) {
-	tokenSlice := ScanTokens("()")
+	tokenSlice := ScanTokens("()", &errorreport.ErrorReport{})
 
 	if len(tokenSlice) != 3 {
 		t.Errorf("len(tokens) should be 3, was %d", len(tokenSlice))
