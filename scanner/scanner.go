@@ -2,7 +2,7 @@ package scanner
 
 import (
 	"github.com/maleksiuk/golox/errorreport"
-	"github.com/maleksiuk/golox/tokens"
+	"github.com/maleksiuk/golox/toks"
 )
 
 type sourceLocation struct {
@@ -20,71 +20,71 @@ func (location *sourceLocation) beginNewLexeme() {
 }
 
 // ScanTokens extracts tokens from a string of Lox code
-func ScanTokens(source string, errorReport *errorreport.ErrorReport) []tokens.Token {
+func ScanTokens(source string, errorReport *errorreport.ErrorReport) []toks.Token {
 	location := sourceLocation{Line: 1}
 	runes := []rune(source)
 
 	// our number of tokens will probably be less than half the source length, so we could revise this later
-	tokenSlice := make([]tokens.Token, 0, len(runes)/2)
+	tokens := make([]toks.Token, 0, len(runes)/2)
 
 	for !location.atEnd(runes) {
 		location.beginNewLexeme()
-		scanToken(&location, runes, &tokenSlice, errorReport)
+		scanToken(&location, runes, &tokens, errorReport)
 	}
 
-	addToken(&tokenSlice, tokens.EOF)
+	addToken(&tokens, toks.EOF)
 
-	return tokenSlice
+	return tokens
 }
 
-func scanToken(location *sourceLocation, runes []rune, tokenSlice *[]tokens.Token, errorReport *errorreport.ErrorReport) {
+func scanToken(location *sourceLocation, runes []rune, tokens *[]toks.Token, errorReport *errorreport.ErrorReport) {
 	r := runes[location.Current]
 	location.Current++
 
 	switch r {
 	case '(':
-		addToken(tokenSlice, tokens.LeftParen)
+		addToken(tokens, toks.LeftParen)
 	case ')':
-		addToken(tokenSlice, tokens.RightParen)
+		addToken(tokens, toks.RightParen)
 	case '{':
-		addToken(tokenSlice, tokens.LeftBrace)
+		addToken(tokens, toks.LeftBrace)
 	case '}':
-		addToken(tokenSlice, tokens.RightBrace)
+		addToken(tokens, toks.RightBrace)
 	case ',':
-		addToken(tokenSlice, tokens.Comma)
+		addToken(tokens, toks.Comma)
 	case '.':
-		addToken(tokenSlice, tokens.Dot)
+		addToken(tokens, toks.Dot)
 	case '-':
-		addToken(tokenSlice, tokens.Minus)
+		addToken(tokens, toks.Minus)
 	case '+':
-		addToken(tokenSlice, tokens.Plus)
+		addToken(tokens, toks.Plus)
 	case ';':
-		addToken(tokenSlice, tokens.Semicolon)
+		addToken(tokens, toks.Semicolon)
 	case '*':
-		addToken(tokenSlice, tokens.Star)
+		addToken(tokens, toks.Star)
 	case '!':
 		if match('=', location, runes) {
-			addToken(tokenSlice, tokens.BangEqual)
+			addToken(tokens, toks.BangEqual)
 		} else {
-			addToken(tokenSlice, tokens.Bang)
+			addToken(tokens, toks.Bang)
 		}
 	case '=':
 		if match('=', location, runes) {
-			addToken(tokenSlice, tokens.EqualEqual)
+			addToken(tokens, toks.EqualEqual)
 		} else {
-			addToken(tokenSlice, tokens.Equal)
+			addToken(tokens, toks.Equal)
 		}
 	case '<':
 		if match('=', location, runes) {
-			addToken(tokenSlice, tokens.LessEqual)
+			addToken(tokens, toks.LessEqual)
 		} else {
-			addToken(tokenSlice, tokens.Less)
+			addToken(tokens, toks.Less)
 		}
 	case '>':
 		if match('=', location, runes) {
-			addToken(tokenSlice, tokens.GreaterEqual)
+			addToken(tokens, toks.GreaterEqual)
 		} else {
-			addToken(tokenSlice, tokens.Greater)
+			addToken(tokens, toks.Greater)
 		}
 	case '/':
 		if match('/', location, runes) {
@@ -93,7 +93,7 @@ func scanToken(location *sourceLocation, runes []rune, tokenSlice *[]tokens.Toke
 				location.Current++
 			}
 		} else {
-			addToken(tokenSlice, tokens.Slash)
+			addToken(tokens, toks.Slash)
 		}
 	case ' ', '\r', '\t':
 		// Ignore whitespace
@@ -104,8 +104,8 @@ func scanToken(location *sourceLocation, runes []rune, tokenSlice *[]tokens.Toke
 	}
 }
 
-func addToken(tokenSlice *[]tokens.Token, tokenType tokens.TokenType) {
-	*tokenSlice = append(*tokenSlice, tokens.Token{TokenType: tokenType})
+func addToken(tokens *[]toks.Token, tokenType toks.TokenType) {
+	*tokens = append(*tokens, toks.Token{TokenType: tokenType})
 }
 
 func match(expected rune, location *sourceLocation, runes []rune) bool {

@@ -4,58 +4,58 @@ import (
 	"testing"
 
 	"github.com/maleksiuk/golox/errorreport"
-	"github.com/maleksiuk/golox/tokens"
+	"github.com/maleksiuk/golox/toks"
 )
 
-func assertSliceLength(t *testing.T, tokenSlice []tokens.Token, expectedLength int) {
-	if len(tokenSlice) != expectedLength {
-		t.Errorf("Slice length should be %d, was %d", expectedLength, len(tokenSlice))
+func assertSliceLength(t *testing.T, tokens []toks.Token, expectedLength int) {
+	if len(tokens) != expectedLength {
+		t.Errorf("Slice length should be %d, was %d", expectedLength, len(tokens))
 	}
 }
 
-func assertTokenType(t *testing.T, token tokens.Token, expectedTokenType tokens.TokenType) {
+func assertTokenType(t *testing.T, token toks.Token, expectedTokenType toks.TokenType) {
 	if token.TokenType != expectedTokenType {
 		t.Errorf("Token should be of type %v, was %v", expectedTokenType, token.TokenType)
 	}
 }
 
 func TestScanTokens(t *testing.T) {
-	tokenSlice := ScanTokens("()", &errorreport.ErrorReport{})
+	tokens := ScanTokens("()", &errorreport.ErrorReport{})
 
-	assertSliceLength(t, tokenSlice, 3)
+	assertSliceLength(t, tokens, 3)
 
-	assertTokenType(t, tokenSlice[0], tokens.LeftParen)
-	assertTokenType(t, tokenSlice[1], tokens.RightParen)
-	assertTokenType(t, tokenSlice[2], tokens.EOF)
+	assertTokenType(t, tokens[0], toks.LeftParen)
+	assertTokenType(t, tokens[1], toks.RightParen)
+	assertTokenType(t, tokens[2], toks.EOF)
 }
 
 func TestScanTokensWithMultipleCharacters(t *testing.T) {
-	bangTokenSlice := ScanTokens("!", &errorreport.ErrorReport{})
-	bangEqualTokenSlice := ScanTokens("!=", &errorreport.ErrorReport{})
+	bangTokens := ScanTokens("!", &errorreport.ErrorReport{})
+	bangEqualTokens := ScanTokens("!=", &errorreport.ErrorReport{})
 
-	assertSliceLength(t, bangTokenSlice, 2)
-	assertSliceLength(t, bangEqualTokenSlice, 2)
+	assertSliceLength(t, bangTokens, 2)
+	assertSliceLength(t, bangEqualTokens, 2)
 
-	assertTokenType(t, bangTokenSlice[0], tokens.Bang)
-	assertTokenType(t, bangEqualTokenSlice[0], tokens.BangEqual)
+	assertTokenType(t, bangTokens[0], toks.Bang)
+	assertTokenType(t, bangEqualTokens[0], toks.BangEqual)
 }
 
 func TestScanComments(t *testing.T) {
-	commentTokenSlice := ScanTokens("// This should be ignored", &errorreport.ErrorReport{})
-	slashTokenSlice := ScanTokens("/*", &errorreport.ErrorReport{})
+	commentTokens := ScanTokens("// This should be ignored", &errorreport.ErrorReport{})
+	slashTokens := ScanTokens("/*", &errorreport.ErrorReport{})
 
-	assertSliceLength(t, commentTokenSlice, 1)
-	assertTokenType(t, commentTokenSlice[0], tokens.EOF)
+	assertSliceLength(t, commentTokens, 1)
+	assertTokenType(t, commentTokens[0], toks.EOF)
 
-	assertSliceLength(t, slashTokenSlice, 3)
-	assertTokenType(t, slashTokenSlice[0], tokens.Slash)
+	assertSliceLength(t, slashTokens, 3)
+	assertTokenType(t, slashTokens[0], toks.Slash)
 }
 
 func TestScanMultipleLines(t *testing.T) {
-	tokenSlice := ScanTokens("()\n!=", &errorreport.ErrorReport{})
+	tokens := ScanTokens("()\n!=", &errorreport.ErrorReport{})
 
-	assertSliceLength(t, tokenSlice, 4)
-	assertTokenType(t, tokenSlice[2], tokens.BangEqual)
+	assertSliceLength(t, tokens, 4)
+	assertTokenType(t, tokens[2], toks.BangEqual)
 }
 
 // TODO: Test that line count is being incremented, including in the comment case.

@@ -1,4 +1,4 @@
-package tokens
+package toks
 
 // TokenType stores the type of token, obviously (e.g., left brace, plus, greater than sign)
 type TokenType int
