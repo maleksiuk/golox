@@ -86,6 +86,19 @@ func scanToken(location *sourceLocation, runes []rune, tokenSlice *[]tokens.Toke
 		} else {
 			addToken(tokenSlice, tokens.Greater)
 		}
+	case '/':
+		if match('/', location, runes) {
+			// ignore commented line
+			for peek(location, runes) != '\n' && !location.atEnd(runes) {
+				location.Current++
+			}
+		} else {
+			addToken(tokenSlice, tokens.Slash)
+		}
+	case ' ', '\r', '\t':
+		// Ignore whitespace
+	case '\n':
+		location.Line++
 	default:
 		errorReport.Report(location.Line, "", "Unexpected character.")
 	}
@@ -106,4 +119,12 @@ func match(expected rune, location *sourceLocation, runes []rune) bool {
 
 	location.Current++
 	return true
+}
+
+func peek(location *sourceLocation, runes []rune) rune {
+	if location.atEnd(runes) {
+		return 0
+	}
+
+	return runes[location.Current]
 }

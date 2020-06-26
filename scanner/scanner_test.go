@@ -47,3 +47,38 @@ func TestScanTokensWithMultipleCharacters(t *testing.T) {
 		t.Errorf("bangEqualTokenSlice token should be of type %v, was %v", tokens.BangEqual, bangEqualTokenSlice[0].TokenType)
 	}
 }
+
+func TestScanComments(t *testing.T) {
+	commentTokenSlice := ScanTokens("// This should be ignored", &errorreport.ErrorReport{})
+	slashTokenSlice := ScanTokens("/*", &errorreport.ErrorReport{})
+
+	if len(commentTokenSlice) != 1 {
+		t.Errorf("len(commentTokenSlice) should be 1, was %d", len(commentTokenSlice))
+	}
+
+	if commentTokenSlice[0].TokenType != tokens.EOF {
+		t.Errorf("commentTokenSlice token should be of type %v, was %v", tokens.EOF, commentTokenSlice[0].TokenType)
+	}
+
+	if len(slashTokenSlice) != 3 {
+		t.Errorf("len(slashTokenSlice) should be 1, was %d", len(slashTokenSlice))
+	}
+
+	if slashTokenSlice[0].TokenType != tokens.Slash {
+		t.Errorf("slashTokenSlice token should be of type %v, was %v", tokens.Slash, slashTokenSlice[0].TokenType)
+	}
+}
+
+func TestScanMultipleLines(t *testing.T) {
+	tokenSlice := ScanTokens("()\n!=", &errorreport.ErrorReport{})
+
+	if len(tokenSlice) != 4 {
+		t.Errorf("len(tokenSlice) should be 4, was %d", len(tokenSlice))
+	}
+
+	if tokenSlice[2].TokenType != tokens.BangEqual {
+		t.Errorf("commentTokenSlice token should be of type %v, was %v", tokens.BangEqual, tokenSlice[0].TokenType)
+	}
+}
+
+// TODO: Test that line count is being incremented, including in the comment case.
