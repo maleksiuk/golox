@@ -58,4 +58,15 @@ func TestScanMultipleLines(t *testing.T) {
 	assertTokenType(t, tokens[2], toks.BangEqual)
 }
 
-// TODO: Test that line count is being incremented, including in the comment case.
+func TestScanStrings(t *testing.T) {
+	tokens := ScanTokens("\"hello\nthere man\"", &errorreport.ErrorReport{})
+	assertSliceLength(t, tokens, 2)
+	assertTokenType(t, tokens[0], toks.String)
+
+	if tokens[0].Literal != "hello\nthere man" {
+		t.Errorf("Expected token literal to be %q but it was %q", "hello\nthere man", tokens[0].Literal)
+	}
+}
+
+// TODO: Test that line count is being incremented, including in the comment and string cases.
+// TODO: Test unterminated string error.

@@ -32,7 +32,7 @@ func ScanTokens(source string, errorReport *errorreport.ErrorReport) []toks.Toke
 		scanToken(&location, runes, &tokens, errorReport)
 	}
 
-	addToken(&tokens, toks.EOF)
+	addToken(&tokens, toks.EOF, nil)
 
 	return tokens
 }
@@ -43,48 +43,48 @@ func scanToken(location *sourceLocation, runes []rune, tokens *[]toks.Token, err
 
 	switch r {
 	case '(':
-		addToken(tokens, toks.LeftParen)
+		addToken(tokens, toks.LeftParen, nil)
 	case ')':
-		addToken(tokens, toks.RightParen)
+		addToken(tokens, toks.RightParen, nil)
 	case '{':
-		addToken(tokens, toks.LeftBrace)
+		addToken(tokens, toks.LeftBrace, nil)
 	case '}':
-		addToken(tokens, toks.RightBrace)
+		addToken(tokens, toks.RightBrace, nil)
 	case ',':
-		addToken(tokens, toks.Comma)
+		addToken(tokens, toks.Comma, nil)
 	case '.':
-		addToken(tokens, toks.Dot)
+		addToken(tokens, toks.Dot, nil)
 	case '-':
-		addToken(tokens, toks.Minus)
+		addToken(tokens, toks.Minus, nil)
 	case '+':
-		addToken(tokens, toks.Plus)
+		addToken(tokens, toks.Plus, nil)
 	case ';':
-		addToken(tokens, toks.Semicolon)
+		addToken(tokens, toks.Semicolon, nil)
 	case '*':
-		addToken(tokens, toks.Star)
+		addToken(tokens, toks.Star, nil)
 	case '!':
 		if match('=', location, runes) {
-			addToken(tokens, toks.BangEqual)
+			addToken(tokens, toks.BangEqual, nil)
 		} else {
-			addToken(tokens, toks.Bang)
+			addToken(tokens, toks.Bang, nil)
 		}
 	case '=':
 		if match('=', location, runes) {
-			addToken(tokens, toks.EqualEqual)
+			addToken(tokens, toks.EqualEqual, nil)
 		} else {
-			addToken(tokens, toks.Equal)
+			addToken(tokens, toks.Equal, nil)
 		}
 	case '<':
 		if match('=', location, runes) {
-			addToken(tokens, toks.LessEqual)
+			addToken(tokens, toks.LessEqual, nil)
 		} else {
-			addToken(tokens, toks.Less)
+			addToken(tokens, toks.Less, nil)
 		}
 	case '>':
 		if match('=', location, runes) {
-			addToken(tokens, toks.GreaterEqual)
+			addToken(tokens, toks.GreaterEqual, nil)
 		} else {
-			addToken(tokens, toks.Greater)
+			addToken(tokens, toks.Greater, nil)
 		}
 	case '/':
 		if match('/', location, runes) {
@@ -93,8 +93,10 @@ func scanToken(location *sourceLocation, runes []rune, tokens *[]toks.Token, err
 				location.Current++
 			}
 		} else {
-			addToken(tokens, toks.Slash)
+			addToken(tokens, toks.Slash, nil)
 		}
+	case '"':
+		handleString(location, tokens, runes, errorReport)
 	case ' ', '\r', '\t':
 		// Ignore whitespace
 	case '\n':
@@ -104,8 +106,30 @@ func scanToken(location *sourceLocation, runes []rune, tokens *[]toks.Token, err
 	}
 }
 
-func addToken(tokens *[]toks.Token, tokenType toks.TokenType) {
-	*tokens = append(*tokens, toks.Token{TokenType: tokenType})
+func handleString(location *sourceLocation, tokens *[]toks.Token, runes []rune, errorReport *errorreport.ErrorReport) {
+	for peek(location, runes) != '"' && !location.atEnd(runes) {
+		if peek(location, runes) == '\n' {
+			location.Line++
+		}
+		location.Current++
+	}
+
+	// Unterminated string.
+	if location.atEnd(runes) {
+		errorReport.Report(location.Line, "", "Unterminated string.")
+		return
+	}
+
+	// The closing ".
+	location.Current++
+
+	// Trim the surrounding quotes.
+	strValue := string(runes[location.Start+1 : location.Current-1])
+	addToken(tokens, toks.String, strValue)
+}
+
+func addToken(tokens *[]toks.Token, tokenType toks.TokenType, value interface{}) {
+	*tokens = append(*tokens, toks.Token{TokenType: tokenType, Literal: value})
 }
 
 func match(expected rune, location *sourceLocation, runes []rune) bool {
