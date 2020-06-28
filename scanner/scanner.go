@@ -1,6 +1,8 @@
 package scanner
 
 import (
+	"strconv"
+
 	"github.com/maleksiuk/golox/errorreport"
 	"github.com/maleksiuk/golox/toks"
 )
@@ -97,6 +99,8 @@ func scanToken(location *sourceLocation, runes []rune, tokens *[]toks.Token, err
 		}
 	case '"':
 		handleString(location, tokens, runes, errorReport)
+	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		handleNumber(location, tokens, runes, errorReport)
 	case ' ', '\r', '\t':
 		// Ignore whitespace
 	case '\n':
@@ -104,6 +108,35 @@ func scanToken(location *sourceLocation, runes []rune, tokens *[]toks.Token, err
 	default:
 		errorReport.Report(location.Line, "", "Unexpected character.")
 	}
+}
+
+func isDigit(r rune) bool {
+	return r >= 0x30 && r <= 0x39
+}
+
+func handleNumber(location *sourceLocation, tokens *[]toks.Token, runes []rune, errorReport *errorreport.ErrorReport) {
+	for isDigit(peek(location, runes)) {
+		location.Current++
+	}
+
+	// Look for a fractional part.
+	if peek(location, runes) == '.' && isDigit(peekNext(location, runes)) {
+		// Consume the "."
+		location.Current++
+
+		for isDigit(peek(location, runes)) {
+			location.Current++
+		}
+	}
+
+	numStr := string(runes[location.Start:location.Current])
+	numValue, err := strconv.ParseFloat(numStr, 64)
+	if err != nil {
+		errorReport.Report(location.Line, "", "Could not convert number literal to float.")
+		return
+	}
+
+	addToken(tokens, toks.Number, numValue)
 }
 
 func handleString(location *sourceLocation, tokens *[]toks.Token, runes []rune, errorReport *errorreport.ErrorReport) {
@@ -151,4 +184,12 @@ func peek(location *sourceLocation, runes []rune) rune {
 	}
 
 	return runes[location.Current]
+}
+
+func peekNext(location *sourceLocation, runes []rune) rune {
+	if location.Current+1 >= len(runes) {
+		return 0
+	}
+
+	return runes[location.Current+1]
 }

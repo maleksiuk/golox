@@ -68,5 +68,20 @@ func TestScanStrings(t *testing.T) {
 	}
 }
 
+func TestScanNumbers(t *testing.T) {
+	tokens := ScanTokens("123 456.78", &errorreport.ErrorReport{})
+	assertSliceLength(t, tokens, 3)
+	assertTokenType(t, tokens[0], toks.Number)
+	assertTokenType(t, tokens[0], toks.Number)
+
+	if tokens[0].Literal != 123.0 {
+		t.Errorf("Expected token literal to be %v but it was %v", 123, tokens[0].Literal)
+	}
+
+	if tokens[1].Literal != 456.78 {
+		t.Errorf("Expected token literal to be %v but it was %v", 456.78, tokens[1].Literal)
+	}
+}
+
 // TODO: Test that line count is being incremented, including in the comment and string cases.
 // TODO: Test unterminated string error.
