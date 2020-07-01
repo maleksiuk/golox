@@ -4,14 +4,9 @@ import (
 	"strconv"
 
 	"github.com/maleksiuk/golox/errorreport"
+	"github.com/maleksiuk/golox/srccode"
 	"github.com/maleksiuk/golox/toks"
 )
-
-type sourceLocation struct {
-	Start   int
-	Current int
-	Line    int
-}
 
 var keywords = map[string]toks.TokenType{
 	"and":    toks.And,
@@ -32,25 +27,16 @@ var keywords = map[string]toks.TokenType{
 	"while":  toks.While,
 }
 
-func (location *sourceLocation) atEnd(runes []rune) bool {
-	return location.Current >= len(runes)
-}
-
-func (location *sourceLocation) beginNewLexeme() {
-	location.Start = location.Current
-}
-
 // ScanTokens extracts tokens from a string of Lox code
-func ScanTokens(source string, errorReport *errorreport.ErrorReport) []toks.Token {
-	location := sourceLocation{Line: 1}
-	runes := []rune(source)
+func ScanTokens(sourceStr string, errorReport *errorreport.ErrorReport) []toks.Token {
+	source := srccode.NewSource(sourceStr)
 
 	// our number of tokens will probably be less than half the source length, so we could revise this later
-	tokens := make([]toks.Token, 0, len(runes)/2)
+	tokens := make([]toks.Token, 0, source.Len()/2)
 
-	for !location.atEnd(runes) {
-		location.beginNewLexeme()
-		scanToken(&location, runes, &tokens, errorReport)
+	for !source.AtEnd() {
+		source.BeginNewLexeme()
+		scanToken(&source, &tokens, errorReport)
 	}
 
 	addToken(&tokens, toks.EOF, nil)
@@ -58,9 +44,8 @@ func ScanTokens(source string, errorReport *errorreport.ErrorReport) []toks.Toke
 	return tokens
 }
 
-func scanToken(location *sourceLocation, runes []rune, tokens *[]toks.Token, errorReport *errorreport.ErrorReport) {
-	r := runes[location.Current]
-	location.Current++
+func scanToken(source *srccode.Source, tokens *[]toks.Token, errorReport *errorreport.ErrorReport) {
+	r := source.Advance()
 
 	switch r {
 	case '(':
@@ -84,57 +69,57 @@ func scanToken(location *sourceLocation, runes []rune, tokens *[]toks.Token, err
 	case '*':
 		addToken(tokens, toks.Star, nil)
 	case '!':
-		if match('=', location, runes) {
+		if source.Match('=') {
 			addToken(tokens, toks.BangEqual, nil)
 		} else {
 			addToken(tokens, toks.Bang, nil)
 		}
 	case '=':
-		if match('=', location, runes) {
+		if source.Match('=') {
 			addToken(tokens, toks.EqualEqual, nil)
 		} else {
 			addToken(tokens, toks.Equal, nil)
 		}
 	case '<':
-		if match('=', location, runes) {
+		if source.Match('=') {
 			addToken(tokens, toks.LessEqual, nil)
 		} else {
 			addToken(tokens, toks.Less, nil)
 		}
 	case '>':
-		if match('=', location, runes) {
+		if source.Match('=') {
 			addToken(tokens, toks.GreaterEqual, nil)
 		} else {
 			addToken(tokens, toks.Greater, nil)
 		}
 	case '/':
-		if match('/', location, runes) {
+		if source.Match('/') {
 			// ignore commented line
-			for peek(location, runes) != '\n' && !location.atEnd(runes) {
-				location.Current++
+			for source.Peek() != '\n' && !source.AtEnd() {
+				source.Advance()
 			}
 		} else {
 			addToken(tokens, toks.Slash, nil)
 		}
 	case '"':
-		handleString(location, tokens, runes, errorReport)
+		handleString(source, tokens, errorReport)
 	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-		handleNumber(location, tokens, runes, errorReport)
+		handleNumber(source, tokens, errorReport)
 	case ' ', '\r', '\t':
 		// Ignore whitespace
 	case '\n':
-		location.Line++
+		source.IncrementLine()
 	default:
 		if isAlpha(r) {
-			handleIdentifier(location, tokens, runes, errorReport)
+			handleIdentifier(source, tokens, errorReport)
 		} else {
-			errorReport.Report(location.Line, "", "Unexpected character.")
+			errorReport.Report(source.CurrentLine(), "", "Unexpected character.")
 		}
 	}
 }
 
 func isDigit(r rune) bool {
-	return r >= 0x30 && r <= 0x39
+	return r >= '0' && r <= '9'
 }
 
 func isAlpha(r rune) bool {
@@ -145,12 +130,12 @@ func isAlphaNumeric(r rune) bool {
 	return isAlpha(r) || isDigit(r)
 }
 
-func handleIdentifier(location *sourceLocation, tokens *[]toks.Token, runes []rune, errorReport *errorreport.ErrorReport) {
-	for isAlphaNumeric(peek(location, runes)) {
-		location.Current++
+func handleIdentifier(source *srccode.Source, tokens *[]toks.Token, errorReport *errorreport.ErrorReport) {
+	for isAlphaNumeric(source.Peek()) {
+		source.Advance()
 	}
 
-	text := string(runes[location.Start:location.Current])
+	text := source.Substring(0, 0)
 	tokenType, keyExists := keywords[text]
 	if keyExists {
 		addToken(tokens, tokenType, nil)
@@ -159,82 +144,53 @@ func handleIdentifier(location *sourceLocation, tokens *[]toks.Token, runes []ru
 	}
 }
 
-func handleNumber(location *sourceLocation, tokens *[]toks.Token, runes []rune, errorReport *errorreport.ErrorReport) {
-	for isDigit(peek(location, runes)) {
-		location.Current++
+func handleNumber(source *srccode.Source, tokens *[]toks.Token, errorReport *errorreport.ErrorReport) {
+	for isDigit(source.Peek()) {
+		source.Advance()
 	}
 
 	// Look for a fractional part.
-	if peek(location, runes) == '.' && isDigit(peekNext(location, runes)) {
+	if source.Peek() == '.' && isDigit(source.PeekNext()) {
 		// Consume the "."
-		location.Current++
+		source.Advance()
 
-		for isDigit(peek(location, runes)) {
-			location.Current++
+		for isDigit(source.Peek()) {
+			source.Advance()
 		}
 	}
 
-	numStr := string(runes[location.Start:location.Current])
+	numStr := source.Substring(0, 0)
 	numValue, err := strconv.ParseFloat(numStr, 64)
 	if err != nil {
-		errorReport.Report(location.Line, "", "Could not convert number literal to float.")
+		errorReport.Report(source.CurrentLine(), "", "Could not convert number literal to float.")
 		return
 	}
 
 	addToken(tokens, toks.Number, numValue)
 }
 
-func handleString(location *sourceLocation, tokens *[]toks.Token, runes []rune, errorReport *errorreport.ErrorReport) {
-	for peek(location, runes) != '"' && !location.atEnd(runes) {
-		if peek(location, runes) == '\n' {
-			location.Line++
+func handleString(source *srccode.Source, tokens *[]toks.Token, errorReport *errorreport.ErrorReport) {
+	for source.Peek() != '"' && !source.AtEnd() {
+		if source.Peek() == '\n' {
+			source.IncrementLine()
 		}
-		location.Current++
+		source.Advance()
 	}
 
 	// Unterminated string.
-	if location.atEnd(runes) {
-		errorReport.Report(location.Line, "", "Unterminated string.")
+	if source.AtEnd() {
+		errorReport.Report(source.CurrentLine(), "", "Unterminated string.")
 		return
 	}
 
 	// The closing ".
-	location.Current++
+	source.Advance()
 
 	// Trim the surrounding quotes.
-	strValue := string(runes[location.Start+1 : location.Current-1])
+	strValue := source.Substring(1, -1)
 	addToken(tokens, toks.String, strValue)
 }
 
 func addToken(tokens *[]toks.Token, tokenType toks.TokenType, value interface{}) {
 	*tokens = append(*tokens, toks.Token{TokenType: tokenType, Literal: value})
-}
-
-func match(expected rune, location *sourceLocation, runes []rune) bool {
-	if location.atEnd(runes) {
-		return false
-	}
-
-	if runes[location.Current] != expected {
-		return false
-	}
-
-	location.Current++
-	return true
-}
-
-func peek(location *sourceLocation, runes []rune) rune {
-	if location.atEnd(runes) {
-		return 0
-	}
-
-	return runes[location.Current]
-}
-
-func peekNext(location *sourceLocation, runes []rune) rune {
-	if location.Current+1 >= len(runes) {
-		return 0
-	}
-
-	return runes[location.Current+1]
 }
