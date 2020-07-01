@@ -19,6 +19,12 @@ func assertTokenType(t *testing.T, token toks.Token, expectedTokenType toks.Toke
 	}
 }
 
+func assertTokenLiteral(t *testing.T, token toks.Token, expectedLiteral interface{}) {
+	if token.Literal != expectedLiteral {
+		t.Errorf("Expected token literal to be %q but it was %q", expectedLiteral, token.Literal)
+	}
+}
+
 func TestScanTokens(t *testing.T) {
 	tokens := ScanTokens("()", &errorreport.ErrorReport{})
 
@@ -62,25 +68,29 @@ func TestScanStrings(t *testing.T) {
 	tokens := ScanTokens("\"hello\nthere man\"", &errorreport.ErrorReport{})
 	assertSliceLength(t, tokens, 2)
 	assertTokenType(t, tokens[0], toks.String)
-
-	if tokens[0].Literal != "hello\nthere man" {
-		t.Errorf("Expected token literal to be %q but it was %q", "hello\nthere man", tokens[0].Literal)
-	}
+	assertTokenLiteral(t, tokens[0], "hello\nthere man")
 }
 
 func TestScanNumbers(t *testing.T) {
 	tokens := ScanTokens("123 456.78", &errorreport.ErrorReport{})
 	assertSliceLength(t, tokens, 3)
 	assertTokenType(t, tokens[0], toks.Number)
-	assertTokenType(t, tokens[0], toks.Number)
+	assertTokenType(t, tokens[1], toks.Number)
+	assertTokenLiteral(t, tokens[0], 123.0)
+	assertTokenLiteral(t, tokens[1], 456.78)
+}
 
-	if tokens[0].Literal != 123.0 {
-		t.Errorf("Expected token literal to be %v but it was %v", 123, tokens[0].Literal)
-	}
+func TestScanIdentifiers(t *testing.T) {
+	tokens := ScanTokens("orchid", &errorreport.ErrorReport{})
+	assertSliceLength(t, tokens, 2)
+	assertTokenType(t, tokens[0], toks.Identifier)
+}
 
-	if tokens[1].Literal != 456.78 {
-		t.Errorf("Expected token literal to be %v but it was %v", 456.78, tokens[1].Literal)
-	}
+func TestScanKeywords(t *testing.T) {
+	tokens := ScanTokens("or and", &errorreport.ErrorReport{})
+	assertSliceLength(t, tokens, 3)
+	assertTokenType(t, tokens[0], toks.Or)
+	assertTokenType(t, tokens[1], toks.And)
 }
 
 // TODO: Test that line count is being incremented, including in the comment and string cases.

@@ -13,6 +13,25 @@ type sourceLocation struct {
 	Line    int
 }
 
+var keywords = map[string]toks.TokenType{
+	"and":    toks.And,
+	"class":  toks.Class,
+	"else":   toks.Else,
+	"false":  toks.False,
+	"for":    toks.For,
+	"fun":    toks.Fun,
+	"if":     toks.If,
+	"nil":    toks.Nil,
+	"or":     toks.Or,
+	"print":  toks.Print,
+	"return": toks.Return,
+	"super":  toks.Super,
+	"this":   toks.This,
+	"true":   toks.True,
+	"var":    toks.Var,
+	"while":  toks.While,
+}
+
 func (location *sourceLocation) atEnd(runes []rune) bool {
 	return location.Current >= len(runes)
 }
@@ -106,12 +125,38 @@ func scanToken(location *sourceLocation, runes []rune, tokens *[]toks.Token, err
 	case '\n':
 		location.Line++
 	default:
-		errorReport.Report(location.Line, "", "Unexpected character.")
+		if isAlpha(r) {
+			handleIdentifier(location, tokens, runes, errorReport)
+		} else {
+			errorReport.Report(location.Line, "", "Unexpected character.")
+		}
 	}
 }
 
 func isDigit(r rune) bool {
 	return r >= 0x30 && r <= 0x39
+}
+
+func isAlpha(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == '_'
+}
+
+func isAlphaNumeric(r rune) bool {
+	return isAlpha(r) || isDigit(r)
+}
+
+func handleIdentifier(location *sourceLocation, tokens *[]toks.Token, runes []rune, errorReport *errorreport.ErrorReport) {
+	for isAlphaNumeric(peek(location, runes)) {
+		location.Current++
+	}
+
+	text := string(runes[location.Start:location.Current])
+	tokenType, keyExists := keywords[text]
+	if keyExists {
+		addToken(tokens, tokenType, nil)
+	} else {
+		addToken(tokens, toks.Identifier, nil)
+	}
 }
 
 func handleNumber(location *sourceLocation, tokens *[]toks.Token, runes []rune, errorReport *errorreport.ErrorReport) {
