@@ -25,13 +25,21 @@ func assertTokenLiteral(t *testing.T, token toks.Token, expectedLiteral interfac
 	}
 }
 
+func assertTokenLexeme(t *testing.T, token toks.Token, expectedLexeme string) {
+	if token.Lexeme != expectedLexeme {
+		t.Errorf("Expected token lexeme to be %v but it was %v", expectedLexeme, token.Lexeme)
+	}
+}
+
 func TestScanTokens(t *testing.T) {
 	tokens := ScanTokens("()", &errorreport.ErrorReport{})
 
 	assertSliceLength(t, tokens, 3)
 
 	assertTokenType(t, tokens[0], toks.LeftParen)
+	assertTokenLexeme(t, tokens[0], "(")
 	assertTokenType(t, tokens[1], toks.RightParen)
+	assertTokenLexeme(t, tokens[1], ")")
 	assertTokenType(t, tokens[2], toks.EOF)
 }
 
@@ -44,6 +52,9 @@ func TestScanTokensWithMultipleCharacters(t *testing.T) {
 
 	assertTokenType(t, bangTokens[0], toks.Bang)
 	assertTokenType(t, bangEqualTokens[0], toks.BangEqual)
+
+	assertTokenLexeme(t, bangTokens[0], "!")
+	assertTokenLexeme(t, bangEqualTokens[0], "!=")
 }
 
 func TestScanComments(t *testing.T) {
@@ -69,6 +80,7 @@ func TestScanStrings(t *testing.T) {
 	assertSliceLength(t, tokens, 2)
 	assertTokenType(t, tokens[0], toks.String)
 	assertTokenLiteral(t, tokens[0], "hello\nthere man")
+	assertTokenLexeme(t, tokens[0], "\"hello\nthere man\"")
 }
 
 func TestScanNumbers(t *testing.T) {

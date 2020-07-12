@@ -39,7 +39,7 @@ func ScanTokens(sourceStr string, errorReport *errorreport.ErrorReport) []toks.T
 		scanToken(&source, &tokens, errorReport)
 	}
 
-	addToken(&tokens, toks.EOF, nil)
+	addToken(&tokens, toks.EOF, nil, &source)
 
 	return tokens
 }
@@ -49,48 +49,48 @@ func scanToken(source *srccode.Source, tokens *[]toks.Token, errorReport *errorr
 
 	switch r {
 	case '(':
-		addToken(tokens, toks.LeftParen, nil)
+		addToken(tokens, toks.LeftParen, nil, source)
 	case ')':
-		addToken(tokens, toks.RightParen, nil)
+		addToken(tokens, toks.RightParen, nil, source)
 	case '{':
-		addToken(tokens, toks.LeftBrace, nil)
+		addToken(tokens, toks.LeftBrace, nil, source)
 	case '}':
-		addToken(tokens, toks.RightBrace, nil)
+		addToken(tokens, toks.RightBrace, nil, source)
 	case ',':
-		addToken(tokens, toks.Comma, nil)
+		addToken(tokens, toks.Comma, nil, source)
 	case '.':
-		addToken(tokens, toks.Dot, nil)
+		addToken(tokens, toks.Dot, nil, source)
 	case '-':
-		addToken(tokens, toks.Minus, nil)
+		addToken(tokens, toks.Minus, nil, source)
 	case '+':
-		addToken(tokens, toks.Plus, nil)
+		addToken(tokens, toks.Plus, nil, source)
 	case ';':
-		addToken(tokens, toks.Semicolon, nil)
+		addToken(tokens, toks.Semicolon, nil, source)
 	case '*':
-		addToken(tokens, toks.Star, nil)
+		addToken(tokens, toks.Star, nil, source)
 	case '!':
 		if source.Match('=') {
-			addToken(tokens, toks.BangEqual, nil)
+			addToken(tokens, toks.BangEqual, nil, source)
 		} else {
-			addToken(tokens, toks.Bang, nil)
+			addToken(tokens, toks.Bang, nil, source)
 		}
 	case '=':
 		if source.Match('=') {
-			addToken(tokens, toks.EqualEqual, nil)
+			addToken(tokens, toks.EqualEqual, nil, source)
 		} else {
-			addToken(tokens, toks.Equal, nil)
+			addToken(tokens, toks.Equal, nil, source)
 		}
 	case '<':
 		if source.Match('=') {
-			addToken(tokens, toks.LessEqual, nil)
+			addToken(tokens, toks.LessEqual, nil, source)
 		} else {
-			addToken(tokens, toks.Less, nil)
+			addToken(tokens, toks.Less, nil, source)
 		}
 	case '>':
 		if source.Match('=') {
-			addToken(tokens, toks.GreaterEqual, nil)
+			addToken(tokens, toks.GreaterEqual, nil, source)
 		} else {
-			addToken(tokens, toks.Greater, nil)
+			addToken(tokens, toks.Greater, nil, source)
 		}
 	case '/':
 		if source.Match('/') {
@@ -99,7 +99,7 @@ func scanToken(source *srccode.Source, tokens *[]toks.Token, errorReport *errorr
 				source.Advance()
 			}
 		} else {
-			addToken(tokens, toks.Slash, nil)
+			addToken(tokens, toks.Slash, nil, source)
 		}
 	case '"':
 		handleString(source, tokens, errorReport)
@@ -138,9 +138,9 @@ func handleIdentifier(source *srccode.Source, tokens *[]toks.Token, errorReport 
 	text := source.Substring(0, 0)
 	tokenType, keyExists := keywords[text]
 	if keyExists {
-		addToken(tokens, tokenType, nil)
+		addToken(tokens, tokenType, nil, source)
 	} else {
-		addToken(tokens, toks.Identifier, nil)
+		addToken(tokens, toks.Identifier, nil, source)
 	}
 }
 
@@ -166,7 +166,7 @@ func handleNumber(source *srccode.Source, tokens *[]toks.Token, errorReport *err
 		return
 	}
 
-	addToken(tokens, toks.Number, numValue)
+	addToken(tokens, toks.Number, numValue, source)
 }
 
 func handleString(source *srccode.Source, tokens *[]toks.Token, errorReport *errorreport.ErrorReport) {
@@ -188,9 +188,9 @@ func handleString(source *srccode.Source, tokens *[]toks.Token, errorReport *err
 
 	// Trim the surrounding quotes.
 	strValue := source.Substring(1, -1)
-	addToken(tokens, toks.String, strValue)
+	addToken(tokens, toks.String, strValue, source)
 }
 
-func addToken(tokens *[]toks.Token, tokenType toks.TokenType, value interface{}) {
-	*tokens = append(*tokens, toks.Token{TokenType: tokenType, Literal: value})
+func addToken(tokens *[]toks.Token, tokenType toks.TokenType, value interface{}, source *srccode.Source) {
+	*tokens = append(*tokens, toks.Token{TokenType: tokenType, Literal: value, Lexeme: source.Substring(0, 0)})
 }
