@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/maleksiuk/golox/errorreport"
+	"github.com/maleksiuk/golox/interpreter"
 	"github.com/maleksiuk/golox/parser"
 	"github.com/maleksiuk/golox/scanner"
 	"github.com/maleksiuk/golox/tools"
@@ -78,6 +79,9 @@ func run(line string, errorReport *errorreport.ErrorReport) {
 	expr := parser.Parse(tokens, errorReport)
 	str := tools.PrintAst(expr)
 	fmt.Println(str)
+
+	interpreter.Interpret(expr)
+
 	for _, token := range tokens {
 		fmt.Printf("token: %v\n", token)
 	}
