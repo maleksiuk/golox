@@ -31,6 +31,12 @@ func assertTokenLexeme(t *testing.T, token toks.Token, expectedLexeme string) {
 	}
 }
 
+func assertTokenLine(t *testing.T, token toks.Token, expectedLine int) {
+	if token.Line != expectedLine {
+		t.Errorf("Expected token %s to have line %d but had line %d", token.Lexeme, expectedLine, token.Line)
+	}
+}
+
 func TestScanTokens(t *testing.T) {
 	tokens := ScanTokens("()", &errorreport.ErrorReport{})
 
@@ -68,19 +74,34 @@ func TestScanComments(t *testing.T) {
 	assertTokenType(t, slashTokens[0], toks.Slash)
 }
 
+func TestLineIncrementingForComments(t *testing.T) {
+	tokens := ScanTokens("// This should be ignored\n2 + 3", &errorreport.ErrorReport{})
+	assertSliceLength(t, tokens, 4)
+	assertTokenLexeme(t, tokens[0], "2")
+	assertTokenLine(t, tokens[0], 2)
+}
+
 func TestScanMultipleLines(t *testing.T) {
 	tokens := ScanTokens("()\n!=", &errorreport.ErrorReport{})
 
 	assertSliceLength(t, tokens, 4)
 	assertTokenType(t, tokens[2], toks.BangEqual)
+	assertTokenLine(t, tokens[0], 1)
+	assertTokenLine(t, tokens[1], 1)
+	assertTokenLine(t, tokens[2], 2)
 }
 
 func TestScanStrings(t *testing.T) {
-	tokens := ScanTokens("\"hello\nthere man\"", &errorreport.ErrorReport{})
-	assertSliceLength(t, tokens, 2)
+	tokens := ScanTokens("\"hello\nthere man\" 2", &errorreport.ErrorReport{})
+	assertSliceLength(t, tokens, 3)
 	assertTokenType(t, tokens[0], toks.String)
 	assertTokenLiteral(t, tokens[0], "hello\nthere man")
 	assertTokenLexeme(t, tokens[0], "\"hello\nthere man\"")
+
+	// When there's a newline in a string we increment the line number, so the string's token's line
+	// number is 2 instead of 1. That seems odd to me.
+	assertTokenLine(t, tokens[0], 2)
+	assertTokenLine(t, tokens[1], 2)
 }
 
 func TestScanNumbers(t *testing.T) {
@@ -105,5 +126,4 @@ func TestScanKeywords(t *testing.T) {
 	assertTokenType(t, tokens[1], toks.And)
 }
 
-// TODO: Test that line count is being incremented, including in the comment and string cases.
 // TODO: Test unterminated string error.

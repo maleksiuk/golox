@@ -192,5 +192,5 @@ func handleString(source *srccode.Source, tokens *[]toks.Token, errorReport *err
 }
 
 func addToken(tokens *[]toks.Token, tokenType toks.TokenType, value interface{}, source *srccode.Source) {
-	*tokens = append(*tokens, toks.Token{TokenType: tokenType, Literal: value, Lexeme: source.Substring(0, 0)})
+	*tokens = append(*tokens, toks.Token{TokenType: tokenType, Literal: value, Lexeme: source.Substring(0, 0), Line: source.CurrentLine()})
 }
