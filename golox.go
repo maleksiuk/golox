@@ -48,6 +48,9 @@ func runFile(path string) error {
 		if errorReport.HadError {
 			return errors.New("Scanner error")
 		}
+		if errorReport.HadRuntimeError {
+			return errors.New("Runtime error")
+		}
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -80,9 +83,9 @@ func run(line string, errorReport *errorreport.ErrorReport) {
 	str := tools.PrintAst(expr)
 	fmt.Println(str)
 
-	interpreter.Interpret(expr)
+	interpreter.Interpret(expr, errorReport)
 
-	for _, token := range tokens {
-		fmt.Printf("token: %v\n", token)
-	}
+	// for _, token := range tokens {
+	// 	fmt.Printf("token: %v\n", token)
+	// }
 }
