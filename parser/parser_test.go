@@ -5,6 +5,7 @@ import (
 
 	"github.com/maleksiuk/golox/errorreport"
 	"github.com/maleksiuk/golox/expr"
+	"github.com/maleksiuk/golox/stmt"
 	"github.com/maleksiuk/golox/toks"
 	"github.com/maleksiuk/golox/tools"
 )
@@ -28,10 +29,13 @@ func TestParseArithmeticAndComparison(t *testing.T) {
 		{TokenType: toks.Number, Lexeme: "5", Literal: 5, Line: 0},
 		{TokenType: toks.Star, Lexeme: "*", Literal: nil, Line: 0},
 		{TokenType: toks.Number, Lexeme: "-9", Literal: -9, Line: 0},
+		{TokenType: toks.Semicolon, Lexeme: ";", Literal: nil, Line: 0},
 		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
 	}
 
-	expression := Parse(tokens, &errorreport.ErrorReport{})
+	statements := Parse(tokens, &errorreport.ErrorReport{})
+	expression := statements[0].(*stmt.Expression).Expression
+
 	assertAST(t, expression, "(>= (group (+ 123.9 92)) (* 5 -9))")
 }
 
@@ -46,9 +50,11 @@ func TestParseUnariesStringsAndBooleans(t *testing.T) {
 		{TokenType: toks.RightParen, Lexeme: ")", Literal: nil, Line: 0},
 		{TokenType: toks.EqualEqual, Lexeme: "==", Literal: nil, Line: 0},
 		{TokenType: toks.False, Lexeme: "false", Literal: nil, Line: 0},
+		{TokenType: toks.Semicolon, Lexeme: ";", Literal: nil, Line: 0},
 		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
 	}
 
-	expression := Parse(tokens, &errorreport.ErrorReport{})
+	statements := Parse(tokens, &errorreport.ErrorReport{})
+	expression := statements[0].(*stmt.Expression).Expression
 	assertAST(t, expression, "(== (! (group (== str1 str2))) false)")
 }

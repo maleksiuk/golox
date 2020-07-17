@@ -5,6 +5,7 @@ import (
 
 	"github.com/maleksiuk/golox/errorreport"
 	"github.com/maleksiuk/golox/expr"
+	"github.com/maleksiuk/golox/stmt"
 	"github.com/maleksiuk/golox/toks"
 )
 
@@ -16,8 +17,8 @@ type runtimeError struct {
 	message string
 }
 
-// Interpret evaluates an expression and prints out the result.
-func Interpret(expression expr.Expr, errorReport *errorreport.ErrorReport) {
+// Interpret evaluates a program (list of statements).
+func Interpret(statements []stmt.Stmt, errorReport *errorreport.ErrorReport) {
 	defer func() {
 		if e := recover(); e != nil {
 			// This will intentionally re-panic if it's not a runtime error.
@@ -26,7 +27,9 @@ func Interpret(expression expr.Expr, errorReport *errorreport.ErrorReport) {
 		}
 	}()
 	i := interpreter{}
-	fmt.Println(stringify(i.evaluate(expression)))
+	for _, statement := range statements {
+		i.execute(statement)
+	}
 }
 
 func (i interpreter) VisitBinary(binary *expr.Binary) interface{} {
@@ -107,6 +110,15 @@ func (i interpreter) VisitUnary(unary *expr.Unary) interface{} {
 	return nil
 }
 
+func (i interpreter) VisitStatementPrint(p *stmt.Print) {
+	val := i.evaluate(p.Expression)
+	fmt.Println(stringify(val))
+}
+
+func (i interpreter) VisitStatementExpression(e *stmt.Expression) {
+	i.evaluate(e.Expression)
+}
+
 func isTruthy(val interface{}) bool {
 	if val == nil {
 		return false
@@ -130,7 +142,14 @@ func isEqual(left interface{}, right interface{}) bool {
 }
 
 func (i interpreter) evaluate(expression expr.Expr) interface{} {
+	// str := tools.PrintAst(expression)
+	// fmt.Println(str)
+
 	return expression.Accept(i)
+}
+
+func (i interpreter) execute(statement stmt.Stmt) {
+	statement.Accept(i)
 }
 
 func checkNumberOperand(operator toks.Token, operand interface{}) {

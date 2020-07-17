@@ -17,6 +17,7 @@ import (
 
 	"github.com/maleksiuk/golox/errorreport"
 	"github.com/maleksiuk/golox/expr"
+	"github.com/maleksiuk/golox/stmt"
 	"github.com/maleksiuk/golox/toks"
 )
 
@@ -39,22 +40,28 @@ func newParseError(token toks.Token, message string) error {
 	return &parseError{token: token, message: message}
 }
 
-// Parse converts a list of tokens to a tree of expressions.
-func Parse(tokens []toks.Token, errorReport *errorreport.ErrorReport) expr.Expr {
+// Parse converts a list of tokens to a list of statements.
+func Parse(tokens []toks.Token, errorReport *errorreport.ErrorReport) []stmt.Stmt {
 	p := parser{current: 0, tokens: tokens, errorReport: errorReport}
 
-	expression, err := p.expression()
+	var statements []stmt.Stmt
 
-	// TODO: Eventually we will print out errors as they happen but for now they all bubble up and we'll print them here.
-	if err != nil {
-		if parseErr, ok := err.(*parseError); ok {
-			p.printError(parseErr.token, parseErr.message)
+	for !p.isAtEnd() {
+		statement, err := p.statement()
+
+		// TODO: Eventually we will print out errors as they happen but for now they all bubble up and we'll print them here.
+		if err != nil {
+			if parseErr, ok := err.(*parseError); ok {
+				p.printError(parseErr.token, parseErr.message)
+			}
+
+			return nil
 		}
 
-		return nil
+		statements = append(statements, statement)
 	}
 
-	return expression
+	return statements
 }
 
 func (p *parser) printError(token toks.Token, message string) {
@@ -63,6 +70,42 @@ func (p *parser) printError(token toks.Token, message string) {
 	} else {
 		p.errorReport.Report(token.Line, fmt.Sprintf(" at '%v'", token.Lexeme), message)
 	}
+}
+
+func (p *parser) statement() (stmt.Stmt, error) {
+	if p.match(toks.Print) {
+		return p.printStatement()
+	}
+
+	return p.expressionStatement()
+}
+
+func (p *parser) printStatement() (stmt.Stmt, error) {
+	val, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.consume(toks.Semicolon, "Expect ';' after value")
+	if err != nil {
+		return nil, err
+	}
+
+	return &stmt.Print{Expression: val}, nil
+}
+
+func (p *parser) expressionStatement() (stmt.Stmt, error) {
+	val, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.consume(toks.Semicolon, "Expect ';' after value")
+	if err != nil {
+		return nil, err
+	}
+
+	return &stmt.Expression{Expression: val}, nil
 }
 
 func (p *parser) expression() (expr.Expr, error) {

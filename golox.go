@@ -11,7 +11,6 @@ import (
 	"github.com/maleksiuk/golox/interpreter"
 	"github.com/maleksiuk/golox/parser"
 	"github.com/maleksiuk/golox/scanner"
-	"github.com/maleksiuk/golox/tools"
 )
 
 func main() {
@@ -79,13 +78,7 @@ func runPrompt() {
 
 func run(line string, errorReport *errorreport.ErrorReport) {
 	tokens := scanner.ScanTokens(line, errorReport)
-	expr := parser.Parse(tokens, errorReport)
-	str := tools.PrintAst(expr)
-	fmt.Println(str)
+	statements := parser.Parse(tokens, errorReport)
 
-	interpreter.Interpret(expr, errorReport)
-
-	// for _, token := range tokens {
-	// 	fmt.Printf("token: %v\n", token)
-	// }
+	interpreter.Interpret(statements, errorReport)
 }
