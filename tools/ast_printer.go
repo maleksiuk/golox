@@ -37,6 +37,11 @@ func (printer astPrinter) VisitUnary(unary *expr.Unary) interface{} {
 	return printer.parenthesize(unary.Operator.Lexeme, unary.Right)
 }
 
+func (printer astPrinter) VisitVariable(v *expr.Variable) interface{} {
+	return v.Name.Lexeme
+
+}
+
 func (printer astPrinter) parenthesize(name string, expressions ...expr.Expr) string {
 	var str strings.Builder
 

@@ -2,6 +2,7 @@ package stmt
 
 import (
 	"github.com/maleksiuk/golox/expr"
+	"github.com/maleksiuk/golox/toks"
 )
 
 type Stmt interface {
@@ -24,7 +25,17 @@ func (p *Print) Accept(visitor Visitor) {
 	visitor.VisitStatementPrint(p)
 }
 
+type Var struct {
+	Name        toks.Token
+	Initializer expr.Expr
+}
+
+func (v *Var) Accept(visitor Visitor) {
+	visitor.VisitStatementVar(v)
+}
+
 type Visitor interface {
 	VisitStatementExpression(expression *Expression)
 	VisitStatementPrint(p *Print)
+	VisitStatementVar(v *Var)
 }

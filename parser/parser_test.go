@@ -58,3 +58,25 @@ func TestParseUnariesStringsAndBooleans(t *testing.T) {
 	expression := statements[0].(*stmt.Expression).Expression
 	assertAST(t, expression, "(== (! (group (== str1 str2))) false)")
 }
+
+func TestParseVariableDeclarations(t *testing.T) {
+	tokens := []toks.Token{
+		{TokenType: toks.Var, Lexeme: "var", Literal: nil, Line: 0},
+		{TokenType: toks.Identifier, Lexeme: "hello", Literal: nil, Line: 0},
+		{TokenType: toks.Equal, Lexeme: "=", Literal: nil, Line: 0},
+		{TokenType: toks.Number, Lexeme: "55", Literal: 55, Line: 0},
+		{TokenType: toks.Plus, Lexeme: "+", Literal: nil, Line: 0},
+		{TokenType: toks.Number, Lexeme: "33", Literal: 33, Line: 0},
+		{TokenType: toks.Semicolon, Lexeme: ";", Literal: nil, Line: 0},
+		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
+	}
+
+	statements := Parse(tokens, &errorreport.ErrorReport{})
+	nameToken := statements[0].(*stmt.Var).Name
+	if nameToken.Lexeme != "hello" {
+		t.Errorf("Expected name token's lexeme to be 'hello'")
+	}
+
+	initializerExpr := statements[0].(*stmt.Var).Initializer
+	assertAST(t, initializerExpr, "(+ 55 33)")
+}

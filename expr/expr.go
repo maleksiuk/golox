@@ -43,9 +43,18 @@ func (unary *Unary) Accept(visitor Visitor) interface{} {
 	return visitor.VisitUnary(unary)
 }
 
+type Variable struct {
+	Name toks.Token
+}
+
+func (variable *Variable) Accept(visitor Visitor) interface{} {
+	return visitor.VisitVariable(variable)
+}
+
 type Visitor interface {
 	VisitBinary(binary *Binary) interface{}
 	VisitGrouping(grouping *Grouping) interface{}
 	VisitLiteral(literal *Literal) interface{}
 	VisitUnary(unary *Unary) interface{}
+	VisitVariable(variable *Variable) interface{}
 }

@@ -15,22 +15,24 @@ import (
 
 func main() {
 	args := os.Args[1:]
-
 	argCount := len(args)
+
+	i := interpreter.NewInterpreter()
+
 	switch {
 	case argCount > 1:
 		fmt.Println("Usage: golox [script]")
 	case argCount == 1:
-		err := runFile(args[0])
+		err := runFile(i, args[0])
 		if err != nil {
 			os.Exit(1)
 		}
 	default:
-		runPrompt()
+		runPrompt(i)
 	}
 }
 
-func runFile(path string) error {
+func runFile(i interpreter.Interpreter, path string) error {
 	file, err := os.Open(path)
 	if err != nil {
 		log.Print(err)
@@ -42,7 +44,7 @@ func runFile(path string) error {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		run(scanner.Text(), &errorReport)
+		run(i, scanner.Text(), &errorReport)
 
 		if errorReport.HadError {
 			return errors.New("Scanner error")
@@ -60,13 +62,13 @@ func runFile(path string) error {
 	return nil
 }
 
-func runPrompt() {
+func runPrompt(i interpreter.Interpreter) {
 	errorReport := errorreport.ErrorReport{}
 
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Print("> ")
 	for scanner.Scan() {
-		run(scanner.Text(), &errorReport)
+		run(i, scanner.Text(), &errorReport)
 		errorReport.HadError = false
 		fmt.Print("> ")
 	}
@@ -76,9 +78,9 @@ func runPrompt() {
 	}
 }
 
-func run(line string, errorReport *errorreport.ErrorReport) {
+func run(i interpreter.Interpreter, line string, errorReport *errorreport.ErrorReport) {
 	tokens := scanner.ScanTokens(line, errorReport)
 	statements := parser.Parse(tokens, errorReport)
 
-	interpreter.Interpret(statements, errorReport)
+	i.Interpret(statements, errorReport)
 }

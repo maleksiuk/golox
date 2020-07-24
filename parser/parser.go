@@ -12,6 +12,8 @@ primary        → NUMBER | STRING | "false" | "true" | "nil"
 			   | "(" expression ")" ;   */
 package parser
 
+// TODO: panic instead of passing errors all the way up the chain
+
 import (
 	"fmt"
 
@@ -47,7 +49,7 @@ func Parse(tokens []toks.Token, errorReport *errorreport.ErrorReport) []stmt.Stm
 	var statements []stmt.Stmt
 
 	for !p.isAtEnd() {
-		statement, err := p.statement()
+		statement, err := p.declaration()
 
 		// TODO: Eventually we will print out errors as they happen but for now they all bubble up and we'll print them here.
 		if err != nil {
@@ -70,6 +72,34 @@ func (p *parser) printError(token toks.Token, message string) {
 	} else {
 		p.errorReport.Report(token.Line, fmt.Sprintf(" at '%v'", token.Lexeme), message)
 	}
+}
+
+func (p *parser) declaration() (stmt.Stmt, error) {
+	// TODO: synchronize (https://craftinginterpreters.com/statements-and-state.html#parsing-variables)
+	if p.match(toks.Var) {
+		return p.varDeclaration()
+	}
+
+	return p.statement()
+}
+
+func (p *parser) varDeclaration() (stmt.Stmt, error) {
+	nameToken, err := p.consume(toks.Identifier, "Expect variable name.")
+	if err != nil {
+		return nil, err
+	}
+
+	var expr expr.Expr
+	if p.match(toks.Equal) {
+		expr, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	p.consume(toks.Semicolon, "Expect ';' after variable declaration.")
+
+	return &stmt.Var{Name: nameToken, Initializer: expr}, nil
 }
 
 func (p *parser) statement() (stmt.Stmt, error) {
@@ -233,6 +263,10 @@ func (p *parser) primary() (expr.Expr, error) {
 		}
 
 		return &expr.Grouping{Expression: expression}, nil
+	}
+
+	if p.match(toks.Identifier) {
+		return &expr.Variable{Name: p.previous()}, nil
 	}
 
 	return nil, newParseError(p.peek(), "expect expression")

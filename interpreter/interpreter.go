@@ -9,7 +9,26 @@ import (
 	"github.com/maleksiuk/golox/toks"
 )
 
-type interpreter struct {
+type environment struct {
+	variables map[string]interface{}
+}
+
+func (e *environment) define(name string, val interface{}) {
+	e.variables[name] = val
+}
+
+func (e *environment) get(name toks.Token) interface{} {
+	val, ok := e.variables[name.Lexeme]
+	if !ok {
+		message := fmt.Sprintf("Undefined variable '%v'.", name.Lexeme)
+		panic(runtimeError{token: name, message: message})
+	}
+
+	return val
+}
+
+type Interpreter struct {
+	env *environment
 }
 
 type runtimeError struct {
@@ -17,8 +36,13 @@ type runtimeError struct {
 	message string
 }
 
+func NewInterpreter() Interpreter {
+	env := environment{variables: make(map[string]interface{})}
+	return Interpreter{env: &env}
+}
+
 // Interpret evaluates a program (list of statements).
-func Interpret(statements []stmt.Stmt, errorReport *errorreport.ErrorReport) {
+func (i Interpreter) Interpret(statements []stmt.Stmt, errorReport *errorreport.ErrorReport) {
 	defer func() {
 		if e := recover(); e != nil {
 			// This will intentionally re-panic if it's not a runtime error.
@@ -26,13 +50,13 @@ func Interpret(statements []stmt.Stmt, errorReport *errorreport.ErrorReport) {
 			errorReport.ReportRuntimeError(runtimeError.token.Line, runtimeError.message)
 		}
 	}()
-	i := interpreter{}
+
 	for _, statement := range statements {
 		i.execute(statement)
 	}
 }
 
-func (i interpreter) VisitBinary(binary *expr.Binary) interface{} {
+func (i Interpreter) VisitBinary(binary *expr.Binary) interface{} {
 	left := i.evaluate(binary.Left)
 	right := i.evaluate(binary.Right)
 
@@ -88,15 +112,15 @@ func (i interpreter) VisitBinary(binary *expr.Binary) interface{} {
 	return nil
 }
 
-func (i interpreter) VisitGrouping(grouping *expr.Grouping) interface{} {
+func (i Interpreter) VisitGrouping(grouping *expr.Grouping) interface{} {
 	return i.evaluate(grouping.Expression)
 }
 
-func (i interpreter) VisitLiteral(literal *expr.Literal) interface{} {
+func (i Interpreter) VisitLiteral(literal *expr.Literal) interface{} {
 	return literal.Value
 }
 
-func (i interpreter) VisitUnary(unary *expr.Unary) interface{} {
+func (i Interpreter) VisitUnary(unary *expr.Unary) interface{} {
 	right := i.evaluate(unary.Right)
 
 	if unary.Operator.TokenType == toks.Bang {
@@ -110,13 +134,26 @@ func (i interpreter) VisitUnary(unary *expr.Unary) interface{} {
 	return nil
 }
 
-func (i interpreter) VisitStatementPrint(p *stmt.Print) {
+func (i Interpreter) VisitVariable(v *expr.Variable) interface{} {
+	return i.env.get(v.Name)
+}
+
+func (i Interpreter) VisitStatementPrint(p *stmt.Print) {
 	val := i.evaluate(p.Expression)
 	fmt.Println(stringify(val))
 }
 
-func (i interpreter) VisitStatementExpression(e *stmt.Expression) {
+func (i Interpreter) VisitStatementExpression(e *stmt.Expression) {
 	i.evaluate(e.Expression)
+}
+
+func (i Interpreter) VisitStatementVar(v *stmt.Var) {
+	var val interface{} = nil
+	if v.Initializer != nil {
+		val = i.evaluate(v.Initializer)
+	}
+
+	i.env.define(v.Name.Lexeme, val)
 }
 
 func isTruthy(val interface{}) bool {
@@ -141,14 +178,14 @@ func isEqual(left interface{}, right interface{}) bool {
 	return left == right
 }
 
-func (i interpreter) evaluate(expression expr.Expr) interface{} {
+func (i Interpreter) evaluate(expression expr.Expr) interface{} {
 	// str := tools.PrintAst(expression)
 	// fmt.Println(str)
 
 	return expression.Accept(i)
 }
 
-func (i interpreter) execute(statement stmt.Stmt) {
+func (i Interpreter) execute(statement stmt.Stmt) {
 	statement.Accept(i)
 }
 
