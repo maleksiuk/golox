@@ -17,6 +17,17 @@ func (e *environment) define(name string, val interface{}) {
 	e.variables[name] = val
 }
 
+func (e *environment) assign(name toks.Token, val interface{}) {
+	nameValue := name.Lexeme
+	_, ok := e.variables[nameValue]
+	if ok {
+		e.variables[nameValue] = val
+	} else {
+		message := fmt.Sprintf("Undefined variable '%v'.", nameValue)
+		panic(runtimeError{token: name, message: message})
+	}
+}
+
 func (e *environment) get(name toks.Token) interface{} {
 	val, ok := e.variables[name.Lexeme]
 	if !ok {
@@ -136,6 +147,13 @@ func (i Interpreter) VisitUnary(unary *expr.Unary) interface{} {
 
 func (i Interpreter) VisitVariable(v *expr.Variable) interface{} {
 	return i.env.get(v.Name)
+}
+
+func (i Interpreter) VisitAssign(assign *expr.Assign) interface{} {
+	value := i.evaluate(assign.Value)
+	i.env.assign(assign.Name, value)
+
+	return value
 }
 
 func (i Interpreter) VisitStatementPrint(p *stmt.Print) {

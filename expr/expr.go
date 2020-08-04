@@ -51,10 +51,20 @@ func (variable *Variable) Accept(visitor Visitor) interface{} {
 	return visitor.VisitVariable(variable)
 }
 
+type Assign struct {
+	Name  toks.Token
+	Value Expr
+}
+
+func (assign *Assign) Accept(visitor Visitor) interface{} {
+	return visitor.VisitAssign(assign)
+}
+
 type Visitor interface {
 	VisitBinary(binary *Binary) interface{}
 	VisitGrouping(grouping *Grouping) interface{}
 	VisitLiteral(literal *Literal) interface{}
 	VisitUnary(unary *Unary) interface{}
 	VisitVariable(variable *Variable) interface{}
+	VisitAssign(assign *Assign) interface{}
 }

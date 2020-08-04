@@ -139,11 +139,37 @@ func (p *parser) expressionStatement() (stmt.Stmt, error) {
 }
 
 func (p *parser) expression() (expr.Expr, error) {
-	return p.equality()
+	return p.assignment()
 }
 
 func (p *parser) previous() toks.Token {
 	return p.tokens[p.current-1]
+}
+
+func (p *parser) assignment() (expr.Expr, error) {
+	expression, err := p.equality()
+	if err != nil {
+		return nil, err
+	}
+
+	if p.match(toks.Equal) {
+		equals := p.previous()
+		value, err := p.assignment()
+		if err != nil {
+			return nil, err
+		}
+
+		if variable, ok := expression.(*expr.Variable); ok {
+			return &expr.Assign{Name: variable.Name, Value: value}, nil
+		} else {
+			// TODO: see https://craftinginterpreters.com/statements-and-state.html#assignment-syntax
+			// and notice that some errors, like this one, should be reported and others should
+			// cause synchronization. I'll need to handle both types later.
+			return nil, newParseError(equals, "Invalid assignment target")
+		}
+	}
+
+	return expression, nil
 }
 
 func (p *parser) equality() (expr.Expr, error) {

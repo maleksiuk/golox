@@ -39,18 +39,28 @@ func (printer astPrinter) VisitUnary(unary *expr.Unary) interface{} {
 
 func (printer astPrinter) VisitVariable(v *expr.Variable) interface{} {
 	return v.Name.Lexeme
-
 }
 
-func (printer astPrinter) parenthesize(name string, expressions ...expr.Expr) string {
+func (printer astPrinter) VisitAssign(assign *expr.Assign) interface{} {
+	return printer.parenthesize("=", assign.Name.Lexeme, assign.Value)
+}
+
+func (printer astPrinter) parenthesize(name string, parts ...interface{}) string {
 	var str strings.Builder
 
 	str.WriteString("(")
 	str.WriteString(name)
 
-	for _, expression := range expressions {
+	for _, part := range parts {
 		str.WriteString(" ")
-		str.WriteString(expression.Accept(printer).(string))
+		switch p := part.(type) {
+		case expr.Expr:
+			str.WriteString(p.Accept(printer).(string))
+		case string:
+			str.WriteString(p)
+		case fmt.Stringer:
+			str.WriteString(p.String())
+		}
 	}
 	str.WriteString(")")
 

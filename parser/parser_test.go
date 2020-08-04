@@ -80,3 +80,20 @@ func TestParseVariableDeclarations(t *testing.T) {
 	initializerExpr := statements[0].(*stmt.Var).Initializer
 	assertAST(t, initializerExpr, "(+ 55 33)")
 }
+
+func TestParseVariableAssignments(t *testing.T) {
+	tokens := []toks.Token{
+		{TokenType: toks.Identifier, Lexeme: "hello", Literal: nil, Line: 0},
+		{TokenType: toks.Equal, Lexeme: "=", Literal: nil, Line: 0},
+		{TokenType: toks.Number, Lexeme: "55", Literal: 55, Line: 0},
+		{TokenType: toks.Plus, Lexeme: "+", Literal: nil, Line: 0},
+		{TokenType: toks.Number, Lexeme: "33", Literal: 33, Line: 0},
+		{TokenType: toks.Semicolon, Lexeme: ";", Literal: nil, Line: 0},
+		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
+	}
+
+	statements := Parse(tokens, &errorreport.ErrorReport{})
+	expression := statements[0].(*stmt.Expression).Expression
+
+	assertAST(t, expression, "(= hello (+ 55 33))")
+}
