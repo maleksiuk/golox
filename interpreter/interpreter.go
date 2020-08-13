@@ -10,6 +10,7 @@ import (
 )
 
 type environment struct {
+	parent    *environment
 	variables map[string]interface{}
 }
 
@@ -23,14 +24,23 @@ func (e *environment) assign(name toks.Token, val interface{}) {
 	if ok {
 		e.variables[nameValue] = val
 	} else {
-		message := fmt.Sprintf("Undefined variable '%v'.", nameValue)
-		panic(runtimeError{token: name, message: message})
+		if e.parent != nil {
+			e.parent.assign(name, val)
+		} else {
+			message := fmt.Sprintf("Undefined variable '%v'.", nameValue)
+			panic(runtimeError{token: name, message: message})
+		}
 	}
 }
 
 func (e *environment) get(name toks.Token) interface{} {
 	val, ok := e.variables[name.Lexeme]
+
 	if !ok {
+		if e.parent != nil {
+			return e.parent.get(name)
+		}
+
 		message := fmt.Sprintf("Undefined variable '%v'.", name.Lexeme)
 		panic(runtimeError{token: name, message: message})
 	}
@@ -47,8 +57,12 @@ type runtimeError struct {
 	message string
 }
 
+func newEnvironment(parent *environment) environment {
+	return environment{variables: make(map[string]interface{}), parent: parent}
+}
+
 func NewInterpreter() Interpreter {
-	env := environment{variables: make(map[string]interface{})}
+	env := newEnvironment(nil)
 	return Interpreter{env: &env}
 }
 
@@ -163,6 +177,22 @@ func (i Interpreter) VisitStatementPrint(p *stmt.Print) {
 
 func (i Interpreter) VisitStatementExpression(e *stmt.Expression) {
 	i.evaluate(e.Expression)
+}
+
+func (i Interpreter) VisitBlock(block *stmt.Block) {
+	i.executeBlock(block.Statements, newEnvironment(i.env))
+}
+
+func (i Interpreter) executeBlock(statements []stmt.Stmt, env environment) {
+	previousEnv := i.env
+	defer func() {
+		i.env = previousEnv
+	}()
+
+	i.env = &env
+	for _, statement := range statements {
+		i.execute(statement)
+	}
 }
 
 func (i Interpreter) VisitStatementVar(v *stmt.Var) {

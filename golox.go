@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 
@@ -33,30 +34,21 @@ func main() {
 }
 
 func runFile(i interpreter.Interpreter, path string) error {
-	file, err := os.Open(path)
+	errorReport := errorreport.ErrorReport{}
+
+	buf, err := ioutil.ReadFile(path)
 	if err != nil {
 		log.Print(err)
 		return err
 	}
-	defer file.Close()
 
-	errorReport := errorreport.ErrorReport{}
+	run(i, string(buf), &errorReport)
 
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		run(i, scanner.Text(), &errorReport)
-
-		if errorReport.HadError {
-			return errors.New("Scanner error")
-		}
-		if errorReport.HadRuntimeError {
-			return errors.New("Runtime error")
-		}
+	if errorReport.HadError {
+		return errors.New("Scanner error")
 	}
-
-	if err := scanner.Err(); err != nil {
-		log.Print(err)
-		return err
+	if errorReport.HadRuntimeError {
+		return errors.New("Runtime error")
 	}
 
 	return nil

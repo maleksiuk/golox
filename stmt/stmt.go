@@ -17,6 +17,14 @@ func (expression *Expression) Accept(visitor Visitor) {
 	visitor.VisitStatementExpression(expression)
 }
 
+type Block struct {
+	Statements []Stmt
+}
+
+func (block *Block) Accept(visitor Visitor) {
+	visitor.VisitBlock(block)
+}
+
 type Print struct {
 	Expression expr.Expr
 }
@@ -38,4 +46,5 @@ type Visitor interface {
 	VisitStatementExpression(expression *Expression)
 	VisitStatementPrint(p *Print)
 	VisitStatementVar(v *Var)
+	VisitBlock(block *Block)
 }
