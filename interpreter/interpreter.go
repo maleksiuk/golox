@@ -81,6 +81,28 @@ func (i Interpreter) Interpret(statements []stmt.Stmt, errorReport *errorreport.
 	}
 }
 
+// GetVariableValue gets the value for the variable with name 'name'. Used for testing only.
+func (i Interpreter) GetVariableValue(name string) interface{} {
+	token := toks.Token{TokenType: toks.Identifier, Literal: nil, Lexeme: name, Line: 0}
+	return i.env.get(token)
+}
+
+func (i Interpreter) VisitLogical(logical *expr.Logical) interface{} {
+	left := i.evaluate(logical.Left)
+	if logical.Operator.TokenType == toks.Or {
+		if isTruthy(left) {
+			return left
+		}
+	} else {
+		if !isTruthy(left) {
+			return left
+		}
+	}
+
+	right := i.evaluate(logical.Right)
+	return right
+}
+
 func (i Interpreter) VisitBinary(binary *expr.Binary) interface{} {
 	left := i.evaluate(binary.Left)
 	right := i.evaluate(binary.Right)

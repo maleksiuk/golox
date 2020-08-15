@@ -97,3 +97,27 @@ func TestParseVariableAssignments(t *testing.T) {
 
 	assertAST(t, expression, "(= hello (+ 55 33))")
 }
+
+func TestParseLogicalOperators(t *testing.T) {
+	// hello == 55 or true and false and something
+	// (hello == 55) or ((true and false) and something)
+	tokens := []toks.Token{
+		{TokenType: toks.Identifier, Lexeme: "hello", Literal: nil, Line: 0},
+		{TokenType: toks.EqualEqual, Lexeme: "==", Literal: nil, Line: 0},
+		{TokenType: toks.Number, Lexeme: "55", Literal: 55, Line: 0},
+		{TokenType: toks.Or, Lexeme: "or", Literal: nil, Line: 0},
+		{TokenType: toks.True, Lexeme: "true", Literal: 33, Line: 0},
+		{TokenType: toks.And, Lexeme: "and", Literal: nil, Line: 0},
+		{TokenType: toks.False, Lexeme: "false", Literal: 33, Line: 0},
+		{TokenType: toks.And, Lexeme: "and", Literal: nil, Line: 0},
+		{TokenType: toks.Identifier, Lexeme: "something", Literal: nil, Line: 0},
+		{TokenType: toks.Semicolon, Lexeme: ";", Literal: nil, Line: 0},
+		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
+	}
+
+	errorReport := errorreport.ErrorReport{}
+	statements := Parse(tokens, &errorReport)
+	expression := statements[0].(*stmt.Expression).Expression
+
+	assertAST(t, expression, "(or (== hello 55) (and (and true false) something))")
+}

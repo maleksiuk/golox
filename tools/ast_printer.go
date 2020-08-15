@@ -25,6 +25,10 @@ func (printer astPrinter) VisitBinary(binary *expr.Binary) interface{} {
 	return printer.parenthesize(binary.Operator.Lexeme, binary.Left, binary.Right)
 }
 
+func (printer astPrinter) VisitLogical(logical *expr.Logical) interface{} {
+	return printer.parenthesize(logical.Operator.Lexeme, logical.Left, logical.Right)
+}
+
 func (printer astPrinter) VisitGrouping(grouping *expr.Grouping) interface{} {
 	return printer.parenthesize("group", grouping.Expression)
 }

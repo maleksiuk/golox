@@ -1,7 +1,11 @@
 /*
 Package parser is used to convert a list of tokens to an abstract syntax tree using the following rules:
 
-expression     → equality ;
+expression     → assignment ;
+assignment     → IDENTIFIER "=" assignment
+			   | logic_or ;
+logic_or       → logic_and ( "or" logic_and )* ;
+logic_and      → equality ( "and" equality )* ;
 equality       → comparison ( ( "!=" | "==" ) comparison )* ;
 comparison     → addition ( ( ">" | ">=" | "<" | "<=" ) addition )* ;
 addition       → multiplication ( ( "-" | "+" ) multiplication )* ;
@@ -201,8 +205,49 @@ func (p *parser) previous() toks.Token {
 	return p.tokens[p.current-1]
 }
 
-func (p *parser) assignment() (expr.Expr, error) {
+// logic_or       → logic_and ( "or" logic_and )* ;
+// logic_and      → equality ( "and" equality )* ;
+
+func (p *parser) logicAnd() (expr.Expr, error) {
 	expression, err := p.equality()
+	if err != nil {
+		return nil, err
+	}
+
+	for p.match(toks.And) {
+		andToken := p.previous()
+		right, err := p.equality()
+		if err != nil {
+			return nil, err
+		}
+
+		expression = &expr.Logical{Left: expression, Operator: andToken, Right: right}
+	}
+
+	return expression, nil
+}
+
+func (p *parser) logicOr() (expr.Expr, error) {
+	expression, err := p.logicAnd()
+	if err != nil {
+		return nil, err
+	}
+
+	for p.match(toks.Or) {
+		orToken := p.previous()
+		right, err := p.logicAnd()
+		if err != nil {
+			return nil, err
+		}
+
+		expression = &expr.Logical{Left: expression, Operator: orToken, Right: right}
+	}
+
+	return expression, nil
+}
+
+func (p *parser) assignment() (expr.Expr, error) {
+	expression, err := p.logicOr()
 	if err != nil {
 		return nil, err
 	}

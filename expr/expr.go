@@ -18,6 +18,16 @@ func (binary *Binary) Accept(visitor Visitor) interface{} {
 	return visitor.VisitBinary(binary)
 }
 
+type Logical struct {
+	Left     Expr
+	Operator toks.Token
+	Right    Expr
+}
+
+func (logical *Logical) Accept(visitor Visitor) interface{} {
+	return visitor.VisitLogical(logical)
+}
+
 type Grouping struct {
 	Expression Expr
 }
@@ -67,4 +77,5 @@ type Visitor interface {
 	VisitUnary(unary *Unary) interface{}
 	VisitVariable(variable *Variable) interface{}
 	VisitAssign(assign *Assign) interface{}
+	VisitLogical(logical *Logical) interface{}
 }
