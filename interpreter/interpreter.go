@@ -179,6 +179,15 @@ func (i Interpreter) VisitStatementExpression(e *stmt.Expression) {
 	i.evaluate(e.Expression)
 }
 
+func (i Interpreter) VisitStatementConditional(conditional *stmt.Conditional) {
+	result := i.evaluate(conditional.Condition)
+	if isTruthy(result) {
+		i.execute(conditional.ThenStatement)
+	} else if conditional.ElseStatement != nil {
+		i.execute(conditional.ElseStatement)
+	}
+}
+
 func (i Interpreter) VisitBlock(block *stmt.Block) {
 	i.executeBlock(block.Statements, newEnvironment(i.env))
 }

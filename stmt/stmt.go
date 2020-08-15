@@ -25,6 +25,16 @@ func (block *Block) Accept(visitor Visitor) {
 	visitor.VisitBlock(block)
 }
 
+type Conditional struct {
+	Condition     expr.Expr
+	ThenStatement Stmt
+	ElseStatement Stmt
+}
+
+func (conditional *Conditional) Accept(visitor Visitor) {
+	visitor.VisitStatementConditional(conditional)
+}
+
 type Print struct {
 	Expression expr.Expr
 }
@@ -47,4 +57,5 @@ type Visitor interface {
 	VisitStatementPrint(p *Print)
 	VisitStatementVar(v *Var)
 	VisitBlock(block *Block)
+	VisitStatementConditional(conditional *Conditional)
 }
