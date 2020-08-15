@@ -126,4 +126,13 @@ func TestScanKeywords(t *testing.T) {
 	assertTokenType(t, tokens[1], toks.And)
 }
 
-// TODO: Test unterminated string error.
+func TestUnterminatedStringError(t *testing.T) {
+	errorReport := errorreport.ErrorReport{}
+	ScanTokens("\"hey man", &errorReport)
+	if !errorReport.HadError {
+		t.Error("Expected error report to think it had an error.")
+	}
+	if errorReport.HadRuntimeError {
+		t.Error("Expected error report to not say it had a runtime error.")
+	}
+}
