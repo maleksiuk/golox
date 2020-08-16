@@ -72,3 +72,23 @@ func TestInterpretArithmetic(t *testing.T) {
 		t.Errorf("Expected result to be %v, but it was %v.", expected, result)
 	}
 }
+
+func TestInterpretWhile(t *testing.T) {
+	code := `
+	  var result = 0;
+	  while (result < 5) {
+		  result = result + 1;
+	  }
+	`
+	tokens := scanner.ScanTokens(code, &errorreport.ErrorReport{})
+	statements := parser.Parse(tokens, &errorreport.ErrorReport{})
+
+	interpreter := NewInterpreter()
+	interpreter.Interpret(statements, &errorreport.ErrorReport{})
+	result := interpreter.GetVariableValue("result").(float64)
+
+	var expected = 5.0
+	if result != expected {
+		t.Errorf("Expected result to be %v, but it was %v.", expected, result)
+	}
+}

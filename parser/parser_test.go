@@ -100,7 +100,6 @@ func TestParseVariableAssignments(t *testing.T) {
 
 func TestParseLogicalOperators(t *testing.T) {
 	// hello == 55 or true and false and something
-	// (hello == 55) or ((true and false) and something)
 	tokens := []toks.Token{
 		{TokenType: toks.Identifier, Lexeme: "hello", Literal: nil, Line: 0},
 		{TokenType: toks.EqualEqual, Lexeme: "==", Literal: nil, Line: 0},
@@ -120,4 +119,34 @@ func TestParseLogicalOperators(t *testing.T) {
 	expression := statements[0].(*stmt.Expression).Expression
 
 	assertAST(t, expression, "(or (== hello 55) (and (and true false) something))")
+}
+
+func TestParseWhileStatements(t *testing.T) {
+	// while (something == 3) {
+	//   print "hi";
+	// }
+	tokens := []toks.Token{
+		{TokenType: toks.While, Lexeme: "while", Literal: nil, Line: 0},
+		{TokenType: toks.LeftParen, Lexeme: "(", Literal: nil, Line: 0},
+		{TokenType: toks.Identifier, Lexeme: "something", Literal: nil, Line: 0},
+		{TokenType: toks.EqualEqual, Lexeme: "==", Literal: nil, Line: 0},
+		{TokenType: toks.Number, Lexeme: "3", Literal: 3, Line: 0},
+		{TokenType: toks.RightParen, Lexeme: ")", Literal: nil, Line: 0},
+		{TokenType: toks.LeftBrace, Lexeme: "{", Literal: nil, Line: 0},
+		{TokenType: toks.Print, Lexeme: "print", Literal: nil, Line: 0},
+		{TokenType: toks.String, Lexeme: "\"hi\"", Literal: "hi", Line: 0},
+		{TokenType: toks.Semicolon, Lexeme: ";", Literal: nil, Line: 0},
+		{TokenType: toks.RightBrace, Lexeme: "}", Literal: nil, Line: 0},
+		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
+	}
+
+	errorReport := errorreport.ErrorReport{}
+	statements := Parse(tokens, &errorReport)
+	condition := statements[0].(*stmt.While).Condition
+	body := statements[0].(*stmt.While).Body
+	blockStatements := body.(*stmt.Block).Statements
+	printExpression := blockStatements[0].(*stmt.Print).Expression
+
+	assertAST(t, condition, "(== something 3)")
+	assertAST(t, printExpression, "hi")
 }

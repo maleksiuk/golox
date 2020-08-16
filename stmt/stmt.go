@@ -43,6 +43,15 @@ func (p *Print) Accept(visitor Visitor) {
 	visitor.VisitStatementPrint(p)
 }
 
+type While struct {
+	Condition expr.Expr
+	Body      Stmt
+}
+
+func (while *While) Accept(visitor Visitor) {
+	visitor.VisitStatementWhile(while)
+}
+
 type Var struct {
 	Name        toks.Token
 	Initializer expr.Expr
@@ -58,4 +67,5 @@ type Visitor interface {
 	VisitStatementVar(v *Var)
 	VisitBlock(block *Block)
 	VisitStatementConditional(conditional *Conditional)
+	VisitStatementWhile(while *While)
 }

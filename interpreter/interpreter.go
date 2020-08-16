@@ -48,6 +48,7 @@ func (e *environment) get(name toks.Token) interface{} {
 	return val
 }
 
+// Interpreter implements execution of Lox statements.
 type Interpreter struct {
 	env *environment
 }
@@ -61,12 +62,13 @@ func newEnvironment(parent *environment) environment {
 	return environment{variables: make(map[string]interface{}), parent: parent}
 }
 
+// NewInterpreter returns a new Interpreter with an empty environment.
 func NewInterpreter() Interpreter {
 	env := newEnvironment(nil)
 	return Interpreter{env: &env}
 }
 
-// Interpret evaluates a program (list of statements).
+// Interpret executes a program (list of statements).
 func (i Interpreter) Interpret(statements []stmt.Stmt, errorReport *errorreport.ErrorReport) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -233,6 +235,12 @@ func (i Interpreter) VisitStatementVar(v *stmt.Var) {
 	}
 
 	i.env.define(v.Name.Lexeme, val)
+}
+
+func (i Interpreter) VisitStatementWhile(while *stmt.While) {
+	for isTruthy(i.evaluate(while.Condition)) {
+		i.execute(while.Body)
+	}
 }
 
 func isTruthy(val interface{}) bool {

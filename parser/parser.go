@@ -13,7 +13,19 @@ multiplication → unary ( ( "/" | "*" ) unary )* ;
 unary          → ( "!" | "-" ) unary
                | primary ;
 primary        → NUMBER | STRING | "false" | "true" | "nil"
-			   | "(" expression ")" ;   */
+			   | "(" expression ")" ;
+
+statement → exprStmt
+          | ifStmt
+          | printStmt
+          | whileStmt
+          | block ;
+
+exprStmt  → expression ";" ;
+printStmt → "print" expression ";" ;
+whileStmt → "while" "(" expression ")" statement ;
+ifStmt    → "if" "(" expression ")" statement ( "else" statement )? ;
+*/
 package parser
 
 // TODO: panic instead of passing errors all the way up the chain
@@ -111,6 +123,10 @@ func (p *parser) statement() (stmt.Stmt, error) {
 		return p.printStatement()
 	}
 
+	if p.match(toks.While) {
+		return p.whileStatement()
+	}
+
 	if p.match(toks.If) {
 		return p.conditionalStatement()
 	}
@@ -181,6 +197,22 @@ func (p *parser) printStatement() (stmt.Stmt, error) {
 	}
 
 	return &stmt.Print{Expression: val}, nil
+}
+
+func (p *parser) whileStatement() (stmt.Stmt, error) {
+	p.consume(toks.LeftParen, "Expect '(' after while")
+	condition, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	p.consume(toks.RightParen, "Expect ')' after while")
+
+	body, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+
+	return &stmt.While{Condition: condition, Body: body}, nil
 }
 
 func (p *parser) expressionStatement() (stmt.Stmt, error) {
@@ -261,12 +293,12 @@ func (p *parser) assignment() (expr.Expr, error) {
 
 		if variable, ok := expression.(*expr.Variable); ok {
 			return &expr.Assign{Name: variable.Name, Value: value}, nil
-		} else {
-			// TODO: see https://craftinginterpreters.com/statements-and-state.html#assignment-syntax
-			// and notice that some errors, like this one, should be reported and others should
-			// cause synchronization. I'll need to handle both types later.
-			return nil, newParseError(equals, "Invalid assignment target")
 		}
+
+		// TODO: see https://craftinginterpreters.com/statements-and-state.html#assignment-syntax
+		// and notice that some errors, like this one, should be reported and others should
+		// cause synchronization. I'll need to handle both types later.
+		return nil, newParseError(equals, "Invalid assignment target")
 	}
 
 	return expression, nil
