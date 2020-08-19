@@ -13,17 +13,26 @@ multiplication → unary ( ( "/" | "*" ) unary )* ;
 unary          → ( "!" | "-" ) unary
                | primary ;
 primary        → NUMBER | STRING | "false" | "true" | "nil"
-			   | "(" expression ")" ;
+			   | "(" expression ")"
+			   | IDENTIFIER ;
 
+program     → declaration* EOF ;
+declaration → varDecl
+			| statement ;
+varDecl     → "var" IDENTIFIER ( "=" expression )? ";" ;
 statement → exprStmt
           | ifStmt
           | printStmt
-          | whileStmt
+		  | whileStmt
+		  | forStmt
           | block ;
 
 exprStmt  → expression ";" ;
 printStmt → "print" expression ";" ;
 whileStmt → "while" "(" expression ")" statement ;
+forStmt   → "for" "(" ( varDecl | exprStmt | ";" )
+                      expression? ";"
+                      expression? ")" statement ;
 ifStmt    → "if" "(" expression ")" statement ( "else" statement )? ;
 */
 package parser
@@ -113,7 +122,10 @@ func (p *parser) varDeclaration() (stmt.Stmt, error) {
 		}
 	}
 
-	p.consume(toks.Semicolon, "Expect ';' after variable declaration.")
+	_, err = p.consume(toks.Semicolon, "Expect ';' after variable declaration.")
+	if err != nil {
+		return nil, err
+	}
 
 	return &stmt.Var{Name: nameToken, Initializer: expr}, nil
 }
@@ -125,6 +137,10 @@ func (p *parser) statement() (stmt.Stmt, error) {
 
 	if p.match(toks.While) {
 		return p.whileStatement()
+	}
+
+	if p.match(toks.For) {
+		return p.forStatement()
 	}
 
 	if p.match(toks.If) {
@@ -162,12 +178,19 @@ func (p *parser) block() ([]stmt.Stmt, error) {
 }
 
 func (p *parser) conditionalStatement() (stmt.Stmt, error) {
-	p.consume(toks.LeftBrace, "Expect '(' after 'if'.")
+	_, err := p.consume(toks.LeftBrace, "Expect '(' after 'if'.")
+	if err != nil {
+		return nil, err
+	}
+
 	condition, err := p.expression()
 	if err != nil {
 		return nil, err
 	}
-	p.consume(toks.RightBrace, "Expect ')' after 'if' condition.")
+	_, err = p.consume(toks.RightBrace, "Expect ')' after 'if' condition.")
+	if err != nil {
+		return nil, err
+	}
 
 	thenStatement, err := p.statement()
 	if err != nil {
@@ -200,12 +223,20 @@ func (p *parser) printStatement() (stmt.Stmt, error) {
 }
 
 func (p *parser) whileStatement() (stmt.Stmt, error) {
-	p.consume(toks.LeftParen, "Expect '(' after while")
+	_, err := p.consume(toks.LeftParen, "Expect '(' after while")
+	if err != nil {
+		return nil, err
+	}
+
 	condition, err := p.expression()
 	if err != nil {
 		return nil, err
 	}
-	p.consume(toks.RightParen, "Expect ')' after while")
+
+	_, err = p.consume(toks.RightParen, "Expect ')' after while")
+	if err != nil {
+		return nil, err
+	}
 
 	body, err := p.statement()
 	if err != nil {
@@ -213,6 +244,90 @@ func (p *parser) whileStatement() (stmt.Stmt, error) {
 	}
 
 	return &stmt.While{Condition: condition, Body: body}, nil
+}
+
+/*
+forStmt   → "for" "(" ( varDecl | exprStmt | ";" )
+                      expression? ";"
+					  expression? ")" statement ;
+*/
+func (p *parser) forStatement() (stmt.Stmt, error) {
+	var err error
+
+	_, err = p.consume(toks.LeftParen, "Expect '(' after for")
+	if err != nil {
+		return nil, err
+	}
+
+	var initializer stmt.Stmt
+	var condition expr.Expr
+	var increment expr.Expr
+
+	if p.match(toks.Semicolon) {
+		initializer = nil
+	} else if p.match(toks.Var) {
+		initializer, err = p.varDeclaration()
+	} else {
+		initializer, err = p.expressionStatement()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if p.match(toks.Semicolon) {
+		condition = nil
+	} else {
+		condition, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+		_, err = p.consume(toks.Semicolon, "Expect ';' after for condition")
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if p.match(toks.RightParen) {
+		increment = nil
+	} else {
+		increment, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+		_, err = p.consume(toks.RightParen, "Expect ')' at end of for")
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	userSpecifiedBody, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+
+	// the body is the user-specified body followed by the (optional) increment
+	var bodyStatements = make([]stmt.Stmt, 0, 2)
+	bodyStatements = append(bodyStatements, userSpecifiedBody)
+	if increment != nil {
+		bodyStatements = append(bodyStatements, &stmt.Expression{Expression: increment})
+	}
+	bodyBlock := &stmt.Block{Statements: bodyStatements}
+
+	if condition == nil {
+		condition = &expr.Literal{Value: true}
+	}
+
+	while := &stmt.While{Condition: condition, Body: bodyBlock}
+
+	// the final result is the (optional) initializer followed by the while loop
+	var statements = make([]stmt.Stmt, 0, 2)
+	if initializer != nil {
+		statements = append(statements, initializer)
+	}
+	statements = append(statements, while)
+	block := &stmt.Block{Statements: statements}
+
+	return block, nil
 }
 
 func (p *parser) expressionStatement() (stmt.Stmt, error) {

@@ -92,3 +92,23 @@ func TestInterpretWhile(t *testing.T) {
 		t.Errorf("Expected result to be %v, but it was %v.", expected, result)
 	}
 }
+
+func TestInterpretFor(t *testing.T) {
+	code := `
+	  var result = 0;
+	  for (var i = 0; i < 5; i = i + 1) {
+		  result = i;
+	  }
+	`
+	tokens := scanner.ScanTokens(code, &errorreport.ErrorReport{})
+	statements := parser.Parse(tokens, &errorreport.ErrorReport{})
+
+	interpreter := NewInterpreter()
+	interpreter.Interpret(statements, &errorreport.ErrorReport{})
+	result := interpreter.GetVariableValue("result").(float64)
+
+	var expected = 4.0
+	if result != expected {
+		t.Errorf("Expected result to be %v, but it was %v.", expected, result)
+	}
+}

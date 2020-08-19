@@ -150,3 +150,94 @@ func TestParseWhileStatements(t *testing.T) {
 	assertAST(t, condition, "(== something 3)")
 	assertAST(t, printExpression, "hi")
 }
+
+func TestParseForStatements(t *testing.T) {
+	// for (var x = 1; x < 3; x = x + 1) {
+	//   print "hi";
+	// }
+	tokens := []toks.Token{
+		{TokenType: toks.For, Lexeme: "for", Literal: nil, Line: 0},
+		{TokenType: toks.LeftParen, Lexeme: "(", Literal: nil, Line: 0},
+
+		{TokenType: toks.Var, Lexeme: "var", Literal: nil, Line: 0},
+		{TokenType: toks.Identifier, Lexeme: "x", Literal: nil, Line: 0},
+		{TokenType: toks.Equal, Lexeme: "=", Literal: nil, Line: 0},
+		{TokenType: toks.Number, Lexeme: "1", Literal: 1, Line: 0},
+		{TokenType: toks.Semicolon, Lexeme: ";", Literal: nil, Line: 0},
+
+		{TokenType: toks.Identifier, Lexeme: "x", Literal: nil, Line: 0},
+		{TokenType: toks.Less, Lexeme: "<", Literal: nil, Line: 0},
+		{TokenType: toks.Number, Lexeme: "3", Literal: 3, Line: 0},
+		{TokenType: toks.Semicolon, Lexeme: ";", Literal: nil, Line: 0},
+
+		{TokenType: toks.Identifier, Lexeme: "x", Literal: nil, Line: 0},
+		{TokenType: toks.Equal, Lexeme: "=", Literal: nil, Line: 0},
+		{TokenType: toks.Identifier, Lexeme: "x", Literal: nil, Line: 0},
+		{TokenType: toks.Plus, Lexeme: "+", Literal: nil, Line: 0},
+		{TokenType: toks.Number, Lexeme: "1", Literal: 1, Line: 0},
+
+		{TokenType: toks.RightParen, Lexeme: ")", Literal: nil, Line: 0},
+		{TokenType: toks.LeftBrace, Lexeme: "{", Literal: nil, Line: 0},
+		{TokenType: toks.Print, Lexeme: "print", Literal: nil, Line: 0},
+		{TokenType: toks.String, Lexeme: "\"hi\"", Literal: "hi", Line: 0},
+		{TokenType: toks.Semicolon, Lexeme: ";", Literal: nil, Line: 0},
+		{TokenType: toks.RightBrace, Lexeme: "}", Literal: nil, Line: 0},
+		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
+	}
+
+	errorReport := errorreport.ErrorReport{}
+	statements := Parse(tokens, &errorReport)
+	outerBlockStatements := statements[0].(*stmt.Block).Statements
+	initializerExpression := outerBlockStatements[0].(*stmt.Var).Initializer
+
+	whileStatement := outerBlockStatements[1].(*stmt.While)
+	condition := whileStatement.Condition
+	body := whileStatement.Body
+	bodyStatements := body.(*stmt.Block).Statements
+	userSpecified := bodyStatements[0].(*stmt.Block)
+	printExpression := userSpecified.Statements[0].(*stmt.Print).Expression
+	incrementExpression := bodyStatements[1].(*stmt.Expression).Expression
+
+	assertAST(t, condition, "(< x 3)")
+	assertAST(t, initializerExpression, "1")
+	assertAST(t, printExpression, "hi")
+	assertAST(t, incrementExpression, "(= x (+ x 1))")
+}
+
+func TestParseEmptyForStatements(t *testing.T) {
+	// for (;;) {
+	//   print "hi";
+	// }
+	tokens := []toks.Token{
+		{TokenType: toks.For, Lexeme: "for", Literal: nil, Line: 0},
+		{TokenType: toks.LeftParen, Lexeme: "(", Literal: nil, Line: 0},
+		{TokenType: toks.Semicolon, Lexeme: ";", Literal: nil, Line: 0},
+		{TokenType: toks.Semicolon, Lexeme: ";", Literal: nil, Line: 0},
+		{TokenType: toks.RightParen, Lexeme: ")", Literal: nil, Line: 0},
+		{TokenType: toks.LeftBrace, Lexeme: "{", Literal: nil, Line: 0},
+		{TokenType: toks.Print, Lexeme: "print", Literal: nil, Line: 0},
+		{TokenType: toks.String, Lexeme: "\"hi\"", Literal: "hi", Line: 0},
+		{TokenType: toks.Semicolon, Lexeme: ";", Literal: nil, Line: 0},
+		{TokenType: toks.RightBrace, Lexeme: "}", Literal: nil, Line: 0},
+		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
+	}
+
+	errorReport := errorreport.ErrorReport{}
+	statements := Parse(tokens, &errorReport)
+	outerBlockStatements := statements[0].(*stmt.Block).Statements
+	whileStatement := outerBlockStatements[0].(*stmt.While)
+
+	condition := whileStatement.Condition.(*expr.Literal)
+	body := whileStatement.Body
+	bodyStatements := body.(*stmt.Block).Statements
+	userSpecified := bodyStatements[0].(*stmt.Block)
+	printExpression := userSpecified.Statements[0].(*stmt.Print).Expression
+	if len(bodyStatements) != 1 {
+		t.Error("There should only be one body statement because there is no increment expression.")
+	}
+
+	if condition.Value != true {
+		t.Error("Condition should be a True literal")
+	}
+	assertAST(t, printExpression, "hi")
+}
