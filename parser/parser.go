@@ -11,7 +11,9 @@ comparison     → addition ( ( ">" | ">=" | "<" | "<=" ) addition )* ;
 addition       → multiplication ( ( "-" | "+" ) multiplication )* ;
 multiplication → unary ( ( "/" | "*" ) unary )* ;
 unary          → ( "!" | "-" ) unary
-               | primary ;
+			   | call ;
+call           → primary ( "(" arguments? ")" )* ;
+arguments      → expression ( "," expression )* ;
 primary        → NUMBER | STRING | "false" | "true" | "nil"
 			   | "(" expression ")"
 			   | IDENTIFIER ;
@@ -504,7 +506,58 @@ func (p *parser) unary() (expr.Expr, error) {
 		return &expr.Unary{Operator: operator, Right: right}, nil
 	}
 
-	return p.primary()
+	return p.call()
+}
+
+func (p *parser) call() (expr.Expr, error) {
+	expr, err := p.primary()
+	if err != nil {
+		return nil, err
+	}
+
+	// the book says doing true/break will be better later on
+	for true {
+		if p.match(toks.LeftParen) {
+			expr, err = p.finishCall(expr)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			break
+		}
+	}
+
+	return expr, nil
+}
+
+func (p *parser) finishCall(callee expr.Expr) (expr.Expr, error) {
+	args := make([]expr.Expr, 0, 5)
+
+	if !p.check(toks.RightParen) {
+		matchedComma := true
+
+		for matchedComma {
+			if len(args) >= 255 {
+				// TODO: This is one that should just be printed out here without stopping parsing.
+				return nil, newParseError(p.peek(), "Cannot have more than 255 arguments.")
+			}
+
+			arg, err := p.expression()
+			if err != nil {
+				return nil, err
+			}
+			args = append(args, arg)
+
+			matchedComma = p.match(toks.Comma)
+		}
+	}
+
+	rightParenToken, err := p.consume(toks.RightParen, "Expected ')' to finish function call")
+	if err != nil {
+		return nil, err
+	}
+
+	return &expr.Call{Callee: callee, Paren: rightParenToken, Arguments: args}, nil
 }
 
 func (p *parser) primary() (expr.Expr, error) {

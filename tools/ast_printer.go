@@ -49,6 +49,23 @@ func (printer astPrinter) VisitAssign(assign *expr.Assign) interface{} {
 	return printer.parenthesize("=", assign.Name.Lexeme, assign.Value)
 }
 
+func (printer astPrinter) VisitCall(call *expr.Call) interface{} {
+	var args strings.Builder
+
+	for idx, ele := range call.Arguments {
+		args.WriteString(ele.Accept(printer).(string))
+		if idx != len(call.Arguments)-1 {
+			args.WriteString(",")
+		}
+	}
+
+	if args.Len() > 0 {
+		return printer.parenthesize("call", call.Callee, args.String())
+	} else {
+		return printer.parenthesize("call", call.Callee)
+	}
+}
+
 func (printer astPrinter) parenthesize(name string, parts ...interface{}) string {
 	var str strings.Builder
 

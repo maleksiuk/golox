@@ -70,6 +70,16 @@ func (assign *Assign) Accept(visitor Visitor) interface{} {
 	return visitor.VisitAssign(assign)
 }
 
+type Call struct {
+	Callee    Expr
+	Paren     toks.Token
+	Arguments []Expr
+}
+
+func (call *Call) Accept(visitor Visitor) interface{} {
+	return visitor.VisitCall(call)
+}
+
 type Visitor interface {
 	VisitBinary(binary *Binary) interface{}
 	VisitGrouping(grouping *Grouping) interface{}
@@ -78,4 +88,5 @@ type Visitor interface {
 	VisitVariable(variable *Variable) interface{}
 	VisitAssign(assign *Assign) interface{}
 	VisitLogical(logical *Logical) interface{}
+	VisitCall(call *Call) interface{}
 }

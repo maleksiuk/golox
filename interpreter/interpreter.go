@@ -48,6 +48,11 @@ func (e *environment) get(name toks.Token) interface{} {
 	return val
 }
 
+type Callable interface {
+	Call(i Interpreter, args []interface{}) interface{}
+	Arity() int
+}
+
 // Interpreter implements execution of Lox statements.
 type Interpreter struct {
 	env *environment
@@ -192,6 +197,25 @@ func (i Interpreter) VisitAssign(assign *expr.Assign) interface{} {
 	i.env.assign(assign.Name, value)
 
 	return value
+}
+
+func (i Interpreter) VisitCall(call *expr.Call) interface{} {
+	callee := i.evaluate(call.Callee)
+
+	args := make([]interface{}, len(call.Arguments))
+	for idx, arg := range call.Arguments {
+		args[idx] = i.evaluate(arg)
+	}
+
+	callable, ok := callee.(Callable)
+	if ok {
+		if len(args) != callable.Arity() {
+			panic(runtimeError{token: call.Paren, message: fmt.Sprintf("Expected %v arguments but got %v.", len(args), callable.Arity())})
+		}
+		return callable.Call(i, args)
+	} else {
+		panic(runtimeError{token: call.Paren, message: "Can only call functions and classes."})
+	}
 }
 
 func (i Interpreter) VisitStatementPrint(p *stmt.Print) {

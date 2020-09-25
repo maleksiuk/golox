@@ -241,3 +241,30 @@ func TestParseEmptyForStatements(t *testing.T) {
 	}
 	assertAST(t, printExpression, "hi")
 }
+
+func TestParseFunctionCalls(t *testing.T) {
+	// somefunction()(otherfunction(x + y, z));
+	tokens := []toks.Token{
+		{TokenType: toks.Identifier, Lexeme: "somefunction", Literal: nil, Line: 0},
+		{TokenType: toks.LeftParen, Lexeme: "(", Literal: nil, Line: 0},
+		{TokenType: toks.RightParen, Lexeme: ")", Literal: nil, Line: 0},
+		{TokenType: toks.LeftParen, Lexeme: "(", Literal: nil, Line: 0},
+		{TokenType: toks.Identifier, Lexeme: "otherfunction", Literal: nil, Line: 0},
+		{TokenType: toks.LeftParen, Lexeme: "(", Literal: nil, Line: 0},
+		{TokenType: toks.Identifier, Lexeme: "x", Literal: nil, Line: 0},
+		{TokenType: toks.Plus, Lexeme: "+", Literal: nil, Line: 0},
+		{TokenType: toks.Identifier, Lexeme: "y", Literal: nil, Line: 0},
+		{TokenType: toks.Comma, Lexeme: ",", Literal: nil, Line: 0},
+		{TokenType: toks.Identifier, Lexeme: "z", Literal: nil, Line: 0},
+		{TokenType: toks.RightParen, Lexeme: ")", Literal: nil, Line: 0},
+		{TokenType: toks.RightParen, Lexeme: ")", Literal: nil, Line: 0},
+		{TokenType: toks.Semicolon, Lexeme: ";", Literal: nil, Line: 0},
+		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
+	}
+
+	errorReport := errorreport.ErrorReport{}
+	statements := Parse(tokens, &errorReport)
+	expression := statements[0].(*stmt.Expression).Expression
+
+	assertAST(t, expression, "(call (call somefunction) (call otherfunction (+ x y),z))")
+}
