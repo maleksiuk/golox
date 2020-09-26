@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/maleksiuk/golox/errorreport"
 	"github.com/maleksiuk/golox/expr"
@@ -63,6 +64,18 @@ type runtimeError struct {
 	message string
 }
 
+// TODO: Should I move this somewhere else?
+type clockFunction struct {
+}
+
+func (function clockFunction) Call(i Interpreter, args []interface{}) interface{} {
+	return float64(time.Now().UnixNano()) / 1e+9
+}
+
+func (function clockFunction) Arity() int {
+	return 0
+}
+
 func newEnvironment(parent *environment) environment {
 	return environment{variables: make(map[string]interface{}), parent: parent}
 }
@@ -70,6 +83,7 @@ func newEnvironment(parent *environment) environment {
 // NewInterpreter returns a new Interpreter with an empty environment.
 func NewInterpreter() Interpreter {
 	env := newEnvironment(nil)
+	env.define("clock", clockFunction{})
 	return Interpreter{env: &env}
 }
 

@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"testing"
+	"time"
 
 	"github.com/maleksiuk/golox/errorreport"
 	"github.com/maleksiuk/golox/parser"
@@ -110,5 +111,25 @@ func TestInterpretFor(t *testing.T) {
 	var expected = 4.0
 	if result != expected {
 		t.Errorf("Expected result to be %v, but it was %v.", expected, result)
+	}
+}
+
+func TestClockFunction(t *testing.T) {
+	code := `
+	var result = clock();
+  `
+	tokens := scanner.ScanTokens(code, &errorreport.ErrorReport{})
+	statements := parser.Parse(tokens, &errorreport.ErrorReport{})
+
+	secondsSinceEpoch := float64(time.Now().Unix())
+
+	interpreter := NewInterpreter()
+	interpreter.Interpret(statements, &errorreport.ErrorReport{})
+	result := interpreter.GetVariableValue("result").(float64)
+
+	timeDiff := result - secondsSinceEpoch
+
+	if timeDiff > 1 {
+		t.Errorf("Expected result to be within one second of %v, but it was not. Result is %v.", secondsSinceEpoch, result)
 	}
 }
