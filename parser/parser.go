@@ -234,7 +234,7 @@ func (p *parser) block() ([]stmt.Stmt, error) {
 }
 
 func (p *parser) conditionalStatement() (stmt.Stmt, error) {
-	_, err := p.consume(toks.LeftBrace, "Expect '(' after 'if'.")
+	_, err := p.consume(toks.LeftParen, "Expect '(' after 'if'.")
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +243,7 @@ func (p *parser) conditionalStatement() (stmt.Stmt, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = p.consume(toks.RightBrace, "Expect ')' after 'if' condition.")
+	_, err = p.consume(toks.RightParen, "Expect ')' after 'if' condition.")
 	if err != nil {
 		return nil, err
 	}

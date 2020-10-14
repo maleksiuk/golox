@@ -242,6 +242,37 @@ func TestParseEmptyForStatements(t *testing.T) {
 	assertAST(t, printExpression, "hi")
 }
 
+func TestParseIfStatements(t *testing.T) {
+	// if (a != b) {
+	//   print "hi";
+	// }
+	tokens := []toks.Token{
+		{TokenType: toks.If, Lexeme: "if", Literal: nil, Line: 0},
+		{TokenType: toks.LeftParen, Lexeme: "(", Literal: nil, Line: 0},
+		{TokenType: toks.Identifier, Lexeme: "a", Literal: nil, Line: 0},
+		{TokenType: toks.BangEqual, Lexeme: "!=", Literal: nil, Line: 0},
+		{TokenType: toks.Identifier, Lexeme: "b", Literal: nil, Line: 0},
+		{TokenType: toks.RightParen, Lexeme: ")", Literal: nil, Line: 0},
+		{TokenType: toks.LeftBrace, Lexeme: "{", Literal: nil, Line: 0},
+		{TokenType: toks.Print, Lexeme: "print", Literal: nil, Line: 0},
+		{TokenType: toks.String, Lexeme: "\"hi\"", Literal: "hi", Line: 0},
+		{TokenType: toks.Semicolon, Lexeme: ";", Literal: nil, Line: 0},
+		{TokenType: toks.RightBrace, Lexeme: "}", Literal: nil, Line: 0},
+		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
+	}
+
+	errorReport := errorreport.ErrorReport{}
+	statements := Parse(tokens, &errorReport)
+	conditional := statements[0].(*stmt.Conditional)
+	condition := conditional.Condition.(*expr.Binary)
+	thenBlock := conditional.ThenStatement.(*stmt.Block)
+
+	assertAST(t, condition, "(!= a b)")
+
+	printExpression := thenBlock.Statements[0].(*stmt.Print).Expression
+	assertAST(t, printExpression, "hi")
+}
+
 func TestParseFunctionCalls(t *testing.T) {
 	// somefunction()(otherfunction(x + y, z));
 	tokens := []toks.Token{
