@@ -82,7 +82,7 @@ func Parse(tokens []toks.Token, errorReport *errorreport.ErrorReport) []stmt.Stm
 	for !p.isAtEnd() {
 		statement, err := p.declaration()
 
-		// TODO: Eventually we will print out errors as they happen but for now they all bubble up and we'll print them here.
+		// TODO: Eventually all errors will be printed out as they happen and this block will be deleted.
 		if err != nil {
 			if parseErr, ok := err.(*parseError); ok {
 				p.printError(parseErr.token, parseErr.message)
@@ -106,12 +106,20 @@ func (p *parser) printError(token toks.Token, message string) {
 }
 
 func (p *parser) declaration() (stmt.Stmt, error) {
+	defer func() {
+		if e := recover(); e != nil {
+			_, ok := e.(*parseError)
+			if !ok {
+				panic(e)
+			}
+			// TODO: synchronize (https://craftinginterpreters.com/statements-and-state.html#parsing-variables)
+		}
+	}()
 
 	if p.match(toks.Fun) {
 		return p.funDeclaration()
 	}
 
-	// TODO: synchronize (https://craftinginterpreters.com/statements-and-state.html#parsing-variables)
 	if p.match(toks.Var) {
 		return p.varDeclaration()
 	}
@@ -120,12 +128,10 @@ func (p *parser) declaration() (stmt.Stmt, error) {
 }
 
 func (p *parser) varDeclaration() (stmt.Stmt, error) {
-	nameToken, err := p.consume(toks.Identifier, "Expect variable name.")
-	if err != nil {
-		return nil, err
-	}
+	nameToken := p.consume(toks.Identifier, "Expect variable name.")
 
 	var expr expr.Expr
+	var err error
 	if p.match(toks.Equal) {
 		expr, err = p.expression()
 		if err != nil {
@@ -133,24 +139,15 @@ func (p *parser) varDeclaration() (stmt.Stmt, error) {
 		}
 	}
 
-	_, err = p.consume(toks.Semicolon, "Expect ';' after variable declaration.")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(toks.Semicolon, "Expect ';' after variable declaration.")
 
 	return &stmt.Var{Name: nameToken, Initializer: expr}, nil
 }
 
 func (p *parser) funDeclaration() (stmt.Stmt, error) {
-	nameToken, err := p.consume(toks.Identifier, "Expect function name.")
-	if err != nil {
-		return nil, err
-	}
+	nameToken := p.consume(toks.Identifier, "Expect function name.")
 
-	_, err = p.consume(toks.LeftParen, "Expect '(' after function name")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(toks.LeftParen, "Expect '(' after function name")
 
 	parameters := make([]toks.Token, 0, 10)
 	matchedComma := true
@@ -162,20 +159,14 @@ func (p *parser) funDeclaration() (stmt.Stmt, error) {
 				return nil, newParseError(p.peek(), "Cannot have more than 255 parameters.")
 			}
 
-			identifierToken, err := p.consume(toks.Identifier, "Expect parameter name.")
-			if err != nil {
-				return nil, err
-			}
+			identifierToken := p.consume(toks.Identifier, "Expect parameter name.")
 			parameters = append(parameters, identifierToken)
 
 			matchedComma = p.match(toks.Comma)
 		}
 	}
 
-	_, err = p.consume(toks.RightParen, "Expect ')' after parameters")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(toks.RightParen, "Expect ')' after parameters")
 
 	p.consume(toks.LeftBrace, "Expect '{' before function body.")
 	body, err := p.block()
@@ -225,28 +216,19 @@ func (p *parser) block() ([]stmt.Stmt, error) {
 		statements = append(statements, statement)
 	}
 
-	_, err := p.consume(toks.RightBrace, "Expect '}' after block.")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(toks.RightBrace, "Expect '}' after block.")
 
 	return statements, nil
 }
 
 func (p *parser) conditionalStatement() (stmt.Stmt, error) {
-	_, err := p.consume(toks.LeftParen, "Expect '(' after 'if'.")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(toks.LeftParen, "Expect '(' after 'if'.")
 
 	condition, err := p.expression()
 	if err != nil {
 		return nil, err
 	}
-	_, err = p.consume(toks.RightParen, "Expect ')' after 'if' condition.")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(toks.RightParen, "Expect ')' after 'if' condition.")
 
 	thenStatement, err := p.statement()
 	if err != nil {
@@ -270,29 +252,20 @@ func (p *parser) printStatement() (stmt.Stmt, error) {
 		return nil, err
 	}
 
-	_, err = p.consume(toks.Semicolon, "Expect ';' after value")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(toks.Semicolon, "Expect ';' after value")
 
 	return &stmt.Print{Expression: val}, nil
 }
 
 func (p *parser) whileStatement() (stmt.Stmt, error) {
-	_, err := p.consume(toks.LeftParen, "Expect '(' after while")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(toks.LeftParen, "Expect '(' after while")
 
 	condition, err := p.expression()
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = p.consume(toks.RightParen, "Expect ')' after while")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(toks.RightParen, "Expect ')' after while")
 
 	body, err := p.statement()
 	if err != nil {
@@ -310,10 +283,7 @@ forStmt   → "for" "(" ( varDecl | exprStmt | ";" )
 func (p *parser) forStatement() (stmt.Stmt, error) {
 	var err error
 
-	_, err = p.consume(toks.LeftParen, "Expect '(' after for")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(toks.LeftParen, "Expect '(' after for")
 
 	var initializer stmt.Stmt
 	var condition expr.Expr
@@ -337,10 +307,7 @@ func (p *parser) forStatement() (stmt.Stmt, error) {
 		if err != nil {
 			return nil, err
 		}
-		_, err = p.consume(toks.Semicolon, "Expect ';' after for condition")
-		if err != nil {
-			return nil, err
-		}
+		p.consume(toks.Semicolon, "Expect ';' after for condition")
 	}
 
 	if p.match(toks.RightParen) {
@@ -350,10 +317,7 @@ func (p *parser) forStatement() (stmt.Stmt, error) {
 		if err != nil {
 			return nil, err
 		}
-		_, err = p.consume(toks.RightParen, "Expect ')' at end of for")
-		if err != nil {
-			return nil, err
-		}
+		p.consume(toks.RightParen, "Expect ')' at end of for")
 	}
 
 	userSpecifiedBody, err := p.statement()
@@ -392,10 +356,7 @@ func (p *parser) expressionStatement() (stmt.Stmt, error) {
 		return nil, err
 	}
 
-	_, err = p.consume(toks.Semicolon, "Expect ';' after value")
-	if err != nil {
-		return nil, err
-	}
+	p.consume(toks.Semicolon, "Expect ';' after value")
 
 	return &stmt.Expression{Expression: val}, nil
 }
@@ -407,9 +368,6 @@ func (p *parser) expression() (expr.Expr, error) {
 func (p *parser) previous() toks.Token {
 	return p.tokens[p.current-1]
 }
-
-// logic_or       → logic_and ( "or" logic_and )* ;
-// logic_and      → equality ( "and" equality )* ;
 
 func (p *parser) logicAnd() (expr.Expr, error) {
 	expression, err := p.equality()
@@ -606,10 +564,7 @@ func (p *parser) finishCall(callee expr.Expr) (expr.Expr, error) {
 		}
 	}
 
-	rightParenToken, err := p.consume(toks.RightParen, "Expected ')' to finish function call")
-	if err != nil {
-		return nil, err
-	}
+	rightParenToken := p.consume(toks.RightParen, "Expected ')' to finish function call")
 
 	return &expr.Call{Callee: callee, Paren: rightParenToken, Arguments: args}, nil
 }
@@ -637,10 +592,7 @@ func (p *parser) primary() (expr.Expr, error) {
 			return nil, err
 		}
 
-		_, err = p.consume(toks.RightParen, "Expect ')' after expression.")
-		if err != nil {
-			return nil, err
-		}
+		p.consume(toks.RightParen, "Expect ')' after expression.")
 
 		return &expr.Grouping{Expression: expression}, nil
 	}
@@ -652,12 +604,19 @@ func (p *parser) primary() (expr.Expr, error) {
 	return nil, newParseError(p.peek(), "expect expression")
 }
 
-func (p *parser) consume(tokenType toks.TokenType, errorMessage string) (toks.Token, error) {
+func (p *parser) consume(tokenType toks.TokenType, errorMessage string) toks.Token {
 	if p.check(tokenType) {
-		return p.advance(), nil
+		return p.advance()
 	}
 
-	return toks.Token{}, newParseError(p.peek(), errorMessage)
+	err := p.handleError(p.peek(), errorMessage)
+	panic(err)
+}
+
+// correspond's to jlox's error() function
+func (p *parser) handleError(token toks.Token, message string) error {
+	p.printError(token, message)
+	return newParseError(token, message)
 }
 
 func (p *parser) advance() toks.Token {
