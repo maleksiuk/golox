@@ -35,6 +35,16 @@ func (conditional *Conditional) Accept(visitor Visitor) {
 	visitor.VisitStatementConditional(conditional)
 }
 
+type Function struct {
+	Name   toks.Token
+	Params []toks.Token
+	Body   []Stmt
+}
+
+func (function *Function) Accept(visitor Visitor) {
+	visitor.VisitStatementFunction(function)
+}
+
 type Print struct {
 	Expression expr.Expr
 }
@@ -68,4 +78,5 @@ type Visitor interface {
 	VisitBlock(block *Block)
 	VisitStatementConditional(conditional *Conditional)
 	VisitStatementWhile(while *While)
+	VisitStatementFunction(function *Function)
 }

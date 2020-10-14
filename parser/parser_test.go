@@ -268,3 +268,62 @@ func TestParseFunctionCalls(t *testing.T) {
 
 	assertAST(t, expression, "(call (call somefunction) (call otherfunction (+ x y),z))")
 }
+
+func TestParseFunctionDeclaration(t *testing.T) {
+	tokens := []toks.Token{
+		{TokenType: toks.Fun, Lexeme: "fun", Literal: nil, Line: 0},
+		{TokenType: toks.Identifier, Lexeme: "do_something", Literal: nil, Line: 0},
+		{TokenType: toks.LeftParen, Lexeme: "(", Literal: nil, Line: 0},
+		{TokenType: toks.RightParen, Lexeme: ")", Literal: nil, Line: 0},
+		{TokenType: toks.LeftBrace, Lexeme: "{", Literal: nil, Line: 0},
+		{TokenType: toks.Print, Lexeme: "print", Literal: nil, Line: 0},
+		{TokenType: toks.String, Lexeme: "\"hi\"", Literal: "hi", Line: 0},
+		{TokenType: toks.Semicolon, Lexeme: ";", Literal: nil, Line: 0},
+		{TokenType: toks.RightBrace, Lexeme: "}", Literal: nil, Line: 0},
+		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
+	}
+
+	statements := Parse(tokens, &errorreport.ErrorReport{})
+	functionStatement := statements[0].(*stmt.Function)
+	nameToken := functionStatement.Name
+	if nameToken.Lexeme != "do_something" {
+		t.Errorf("Expected name token's lexeme to be 'do_something'")
+	}
+
+	if len(functionStatement.Params) != 0 {
+		t.Errorf("Expected there to be no function parameters")
+	}
+
+	bodyStatements := functionStatement.Body
+	printExpression := bodyStatements[0].(*stmt.Print).Expression
+	assertAST(t, printExpression, "hi")
+}
+
+func TestParseFunctionDeclarationParameters(t *testing.T) {
+	tokens := []toks.Token{
+		{TokenType: toks.Fun, Lexeme: "fun", Literal: nil, Line: 0},
+		{TokenType: toks.Identifier, Lexeme: "do_something", Literal: nil, Line: 0},
+		{TokenType: toks.LeftParen, Lexeme: "(", Literal: nil, Line: 0},
+		{TokenType: toks.Identifier, Lexeme: "cool_cool_water", Literal: nil, Line: 0},
+		{TokenType: toks.Comma, Lexeme: ",", Literal: nil, Line: 0},
+		{TokenType: toks.Identifier, Lexeme: "by_marty_robbins", Literal: nil, Line: 0},
+		{TokenType: toks.RightParen, Lexeme: ")", Literal: nil, Line: 0},
+		{TokenType: toks.LeftBrace, Lexeme: "{", Literal: nil, Line: 0},
+		{TokenType: toks.Print, Lexeme: "print", Literal: nil, Line: 0},
+		{TokenType: toks.String, Lexeme: "\"hi\"", Literal: "hi", Line: 0},
+		{TokenType: toks.Semicolon, Lexeme: ";", Literal: nil, Line: 0},
+		{TokenType: toks.RightBrace, Lexeme: "}", Literal: nil, Line: 0},
+		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
+	}
+
+	statements := Parse(tokens, &errorreport.ErrorReport{})
+	functionStatement := statements[0].(*stmt.Function)
+	parameters := functionStatement.Params
+	if len(parameters) != 2 {
+		t.Errorf("Expected there to be 2 function parameters")
+	}
+
+	if parameters[0].Lexeme != "cool_cool_water" || parameters[1].Lexeme != "by_marty_robbins" {
+		t.Errorf("Expected parameters to be cool_cool_water and by_marty_robbins")
+	}
+}

@@ -275,6 +275,10 @@ func (i Interpreter) VisitStatementVar(v *stmt.Var) {
 	i.env.define(v.Name.Lexeme, val)
 }
 
+func (i Interpreter) VisitStatementFunction(function *stmt.Function) {
+	// TODO
+}
+
 func (i Interpreter) VisitStatementWhile(while *stmt.While) {
 	for isTruthy(i.evaluate(while.Condition)) {
 		i.execute(while.Body)

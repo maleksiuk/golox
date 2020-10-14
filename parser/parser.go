@@ -19,9 +19,13 @@ primary        → NUMBER | STRING | "false" | "true" | "nil"
 			   | IDENTIFIER ;
 
 program     → declaration* EOF ;
-declaration → varDecl
+declaration → funDecl
+            | varDecl
 			| statement ;
 varDecl     → "var" IDENTIFIER ( "=" expression )? ";" ;
+funDecl        → "fun" function ;
+function       → IDENTIFIER "(" parameters? ")" block ;
+parameters     → IDENTIFIER ( "," IDENTIFIER )* ;
 statement → exprStmt
           | ifStmt
           | printStmt
@@ -102,6 +106,11 @@ func (p *parser) printError(token toks.Token, message string) {
 }
 
 func (p *parser) declaration() (stmt.Stmt, error) {
+
+	if p.match(toks.Fun) {
+		return p.funDeclaration()
+	}
+
 	// TODO: synchronize (https://craftinginterpreters.com/statements-and-state.html#parsing-variables)
 	if p.match(toks.Var) {
 		return p.varDeclaration()
@@ -130,6 +139,51 @@ func (p *parser) varDeclaration() (stmt.Stmt, error) {
 	}
 
 	return &stmt.Var{Name: nameToken, Initializer: expr}, nil
+}
+
+func (p *parser) funDeclaration() (stmt.Stmt, error) {
+	nameToken, err := p.consume(toks.Identifier, "Expect function name.")
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.consume(toks.LeftParen, "Expect '(' after function name")
+	if err != nil {
+		return nil, err
+	}
+
+	parameters := make([]toks.Token, 0, 10)
+	matchedComma := true
+
+	if !p.check(toks.RightParen) {
+		for matchedComma {
+			if len(parameters) >= 255 {
+				// TODO: This is one that should just be printed out here without stopping parsing.
+				return nil, newParseError(p.peek(), "Cannot have more than 255 parameters.")
+			}
+
+			identifierToken, err := p.consume(toks.Identifier, "Expect parameter name.")
+			if err != nil {
+				return nil, err
+			}
+			parameters = append(parameters, identifierToken)
+
+			matchedComma = p.match(toks.Comma)
+		}
+	}
+
+	_, err = p.consume(toks.RightParen, "Expect ')' after parameters")
+	if err != nil {
+		return nil, err
+	}
+
+	p.consume(toks.LeftBrace, "Expect '{' before function body.")
+	body, err := p.block()
+	if err != nil {
+		return nil, err
+	}
+
+	return &stmt.Function{Name: nameToken, Params: parameters, Body: body}, nil
 }
 
 func (p *parser) statement() (stmt.Stmt, error) {
