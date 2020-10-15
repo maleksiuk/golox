@@ -37,8 +37,13 @@ func assertTokenLine(t *testing.T, token toks.Token, expectedLine int) {
 	}
 }
 
+func newMockErrorReport() errorreport.ErrorReport {
+	return errorreport.ErrorReport{Printer: errorreport.NewMockPrinter()}
+}
+
 func TestScanTokens(t *testing.T) {
-	tokens := ScanTokens("()", &errorreport.ErrorReport{})
+	errorReport := newMockErrorReport()
+	tokens := ScanTokens("()", &errorReport)
 
 	assertSliceLength(t, tokens, 3)
 
@@ -50,8 +55,9 @@ func TestScanTokens(t *testing.T) {
 }
 
 func TestScanTokensWithMultipleCharacters(t *testing.T) {
-	bangTokens := ScanTokens("!", &errorreport.ErrorReport{})
-	bangEqualTokens := ScanTokens("!=", &errorreport.ErrorReport{})
+	errorReport := newMockErrorReport()
+	bangTokens := ScanTokens("!", &errorReport)
+	bangEqualTokens := ScanTokens("!=", &errorReport)
 
 	assertSliceLength(t, bangTokens, 2)
 	assertSliceLength(t, bangEqualTokens, 2)
@@ -64,8 +70,9 @@ func TestScanTokensWithMultipleCharacters(t *testing.T) {
 }
 
 func TestScanComments(t *testing.T) {
-	commentTokens := ScanTokens("// This should be ignored", &errorreport.ErrorReport{})
-	slashTokens := ScanTokens("/*", &errorreport.ErrorReport{})
+	errorReport := newMockErrorReport()
+	commentTokens := ScanTokens("// This should be ignored", &errorReport)
+	slashTokens := ScanTokens("/*", &errorReport)
 
 	assertSliceLength(t, commentTokens, 1)
 	assertTokenType(t, commentTokens[0], toks.EOF)
@@ -75,14 +82,16 @@ func TestScanComments(t *testing.T) {
 }
 
 func TestLineIncrementingForComments(t *testing.T) {
-	tokens := ScanTokens("// This should be ignored\n2 + 3", &errorreport.ErrorReport{})
+	errorReport := newMockErrorReport()
+	tokens := ScanTokens("// This should be ignored\n2 + 3", &errorReport)
 	assertSliceLength(t, tokens, 4)
 	assertTokenLexeme(t, tokens[0], "2")
 	assertTokenLine(t, tokens[0], 2)
 }
 
 func TestScanMultipleLines(t *testing.T) {
-	tokens := ScanTokens("()\n!=", &errorreport.ErrorReport{})
+	errorReport := newMockErrorReport()
+	tokens := ScanTokens("()\n!=", &errorReport)
 
 	assertSliceLength(t, tokens, 4)
 	assertTokenType(t, tokens[2], toks.BangEqual)
@@ -92,7 +101,8 @@ func TestScanMultipleLines(t *testing.T) {
 }
 
 func TestScanStrings(t *testing.T) {
-	tokens := ScanTokens("\"hello\nthere man\" 2", &errorreport.ErrorReport{})
+	errorReport := newMockErrorReport()
+	tokens := ScanTokens("\"hello\nthere man\" 2", &errorReport)
 	assertSliceLength(t, tokens, 3)
 	assertTokenType(t, tokens[0], toks.String)
 	assertTokenLiteral(t, tokens[0], "hello\nthere man")
@@ -105,7 +115,8 @@ func TestScanStrings(t *testing.T) {
 }
 
 func TestScanNumbers(t *testing.T) {
-	tokens := ScanTokens("123 456.78", &errorreport.ErrorReport{})
+	errorReport := newMockErrorReport()
+	tokens := ScanTokens("123 456.78", &errorReport)
 	assertSliceLength(t, tokens, 3)
 	assertTokenType(t, tokens[0], toks.Number)
 	assertTokenType(t, tokens[1], toks.Number)
@@ -114,20 +125,22 @@ func TestScanNumbers(t *testing.T) {
 }
 
 func TestScanIdentifiers(t *testing.T) {
-	tokens := ScanTokens("orchid", &errorreport.ErrorReport{})
+	errorReport := newMockErrorReport()
+	tokens := ScanTokens("orchid", &errorReport)
 	assertSliceLength(t, tokens, 2)
 	assertTokenType(t, tokens[0], toks.Identifier)
 }
 
 func TestScanKeywords(t *testing.T) {
-	tokens := ScanTokens("or and", &errorreport.ErrorReport{})
+	errorReport := newMockErrorReport()
+	tokens := ScanTokens("or and", &errorReport)
 	assertSliceLength(t, tokens, 3)
 	assertTokenType(t, tokens[0], toks.Or)
 	assertTokenType(t, tokens[1], toks.And)
 }
 
 func TestUnterminatedStringError(t *testing.T) {
-	errorReport := errorreport.ErrorReport{}
+	errorReport := newMockErrorReport()
 	ScanTokens("\"hey man", &errorReport)
 	if !errorReport.HadError {
 		t.Error("Expected error report to think it had an error.")

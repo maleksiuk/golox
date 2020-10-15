@@ -99,9 +99,9 @@ func Parse(tokens []toks.Token, errorReport *errorreport.ErrorReport) []stmt.Stm
 
 func (p *parser) printError(token toks.Token, message string) {
 	if token.TokenType == toks.EOF {
-		p.errorReport.Report(token.Line, " at end", message)
+		p.errorReport.Report(token.Line, "at end", message)
 	} else {
-		p.errorReport.Report(token.Line, fmt.Sprintf(" at '%v'", token.Lexeme), message)
+		p.errorReport.Report(token.Line, fmt.Sprintf("at '%v'", token.Lexeme), message)
 	}
 }
 
@@ -424,10 +424,7 @@ func (p *parser) assignment() (expr.Expr, error) {
 			return &expr.Assign{Name: variable.Name, Value: value}, nil
 		}
 
-		// TODO: see https://craftinginterpreters.com/statements-and-state.html#assignment-syntax
-		// and notice that some errors, like this one, should be reported and others should
-		// cause synchronization. I'll need to handle both types later.
-		return nil, newParseError(equals, "Invalid assignment target")
+		p.handleError(equals, "Invalid assignment target")
 	}
 
 	return expression, nil

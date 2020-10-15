@@ -17,6 +17,35 @@ func assertAST(t *testing.T, expression expr.Expr, expectedTree string) {
 	}
 }
 
+func assertSingleError(t *testing.T, errorReport errorreport.ErrorReport, message string, hadError bool, hadRuntimeError bool) {
+	errorMessages := errorReport.Printer.(*errorreport.MockPrinter).GetStrings()
+
+	if len(errorMessages) != 1 {
+		t.Errorf("There was more than one error message.")
+	}
+
+	if errorMessages[0] != message {
+		t.Errorf("Expected message to be [%v] but it was [%v]", message, errorMessages[0])
+	}
+
+	if errorReport.HadError != hadError {
+		t.Errorf("Expected hadError to be %v but it was %v", hadError, errorReport.HadError)
+	}
+
+	if errorReport.HadRuntimeError != hadRuntimeError {
+		t.Errorf("Expected hadError to be %v but it was %v", hadRuntimeError, errorReport.HadRuntimeError)
+	}
+}
+
+func newMockErrorReport() errorreport.ErrorReport {
+	return errorreport.ErrorReport{Printer: errorreport.NewMockPrinter()}
+}
+
+func parse(tokens []toks.Token) []stmt.Stmt {
+	errorReport := newMockErrorReport()
+	return Parse(tokens, &errorReport)
+}
+
 func TestParseArithmeticAndComparison(t *testing.T) {
 	// (123.9 + 92) >= 5 * -9
 	tokens := []toks.Token{
@@ -33,7 +62,7 @@ func TestParseArithmeticAndComparison(t *testing.T) {
 		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
 	}
 
-	statements := Parse(tokens, &errorreport.ErrorReport{})
+	statements := parse(tokens)
 	expression := statements[0].(*stmt.Expression).Expression
 
 	assertAST(t, expression, "(>= (group (+ 123.9 92)) (* 5 -9))")
@@ -54,7 +83,7 @@ func TestParseUnariesStringsAndBooleans(t *testing.T) {
 		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
 	}
 
-	statements := Parse(tokens, &errorreport.ErrorReport{})
+	statements := parse(tokens)
 	expression := statements[0].(*stmt.Expression).Expression
 	assertAST(t, expression, "(== (! (group (== str1 str2))) false)")
 }
@@ -71,7 +100,7 @@ func TestParseVariableDeclarations(t *testing.T) {
 		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
 	}
 
-	statements := Parse(tokens, &errorreport.ErrorReport{})
+	statements := parse(tokens)
 	nameToken := statements[0].(*stmt.Var).Name
 	if nameToken.Lexeme != "hello" {
 		t.Errorf("Expected name token's lexeme to be 'hello'")
@@ -92,10 +121,27 @@ func TestParseVariableAssignments(t *testing.T) {
 		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
 	}
 
-	statements := Parse(tokens, &errorreport.ErrorReport{})
+	statements := parse(tokens)
 	expression := statements[0].(*stmt.Expression).Expression
 
 	assertAST(t, expression, "(= hello (+ 55 33))")
+}
+
+func TestInvalidAssignmentTargetError(t *testing.T) {
+	tokens := []toks.Token{
+		{TokenType: toks.String, Lexeme: "\"hello\"", Literal: "hello", Line: 0},
+		{TokenType: toks.Equal, Lexeme: "=", Literal: nil, Line: 0},
+		{TokenType: toks.Number, Lexeme: "55", Literal: 55, Line: 0},
+		{TokenType: toks.Semicolon, Lexeme: ";", Literal: nil, Line: 0},
+		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
+	}
+
+	errorReport := newMockErrorReport()
+	statements := Parse(tokens, &errorReport)
+	expression := statements[0].(*stmt.Expression).Expression
+
+	assertSingleError(t, errorReport, "[line 0] Error at '=': Invalid assignment target\n", true, false)
+	assertAST(t, expression, "hello")
 }
 
 func TestParseLogicalOperators(t *testing.T) {
@@ -114,8 +160,7 @@ func TestParseLogicalOperators(t *testing.T) {
 		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
 	}
 
-	errorReport := errorreport.ErrorReport{}
-	statements := Parse(tokens, &errorReport)
+	statements := parse(tokens)
 	expression := statements[0].(*stmt.Expression).Expression
 
 	assertAST(t, expression, "(or (== hello 55) (and (and true false) something))")
@@ -140,8 +185,7 @@ func TestParseWhileStatements(t *testing.T) {
 		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
 	}
 
-	errorReport := errorreport.ErrorReport{}
-	statements := Parse(tokens, &errorReport)
+	statements := parse(tokens)
 	condition := statements[0].(*stmt.While).Condition
 	body := statements[0].(*stmt.While).Body
 	blockStatements := body.(*stmt.Block).Statements
@@ -185,8 +229,7 @@ func TestParseForStatements(t *testing.T) {
 		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
 	}
 
-	errorReport := errorreport.ErrorReport{}
-	statements := Parse(tokens, &errorReport)
+	statements := parse(tokens)
 	outerBlockStatements := statements[0].(*stmt.Block).Statements
 	initializerExpression := outerBlockStatements[0].(*stmt.Var).Initializer
 
@@ -222,8 +265,7 @@ func TestParseEmptyForStatements(t *testing.T) {
 		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
 	}
 
-	errorReport := errorreport.ErrorReport{}
-	statements := Parse(tokens, &errorReport)
+	statements := parse(tokens)
 	outerBlockStatements := statements[0].(*stmt.Block).Statements
 	whileStatement := outerBlockStatements[0].(*stmt.While)
 
@@ -261,8 +303,7 @@ func TestParseIfStatements(t *testing.T) {
 		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
 	}
 
-	errorReport := errorreport.ErrorReport{}
-	statements := Parse(tokens, &errorReport)
+	statements := parse(tokens)
 	conditional := statements[0].(*stmt.Conditional)
 	condition := conditional.Condition.(*expr.Binary)
 	thenBlock := conditional.ThenStatement.(*stmt.Block)
@@ -293,8 +334,7 @@ func TestParseFunctionCalls(t *testing.T) {
 		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
 	}
 
-	errorReport := errorreport.ErrorReport{}
-	statements := Parse(tokens, &errorReport)
+	statements := parse(tokens)
 	expression := statements[0].(*stmt.Expression).Expression
 
 	assertAST(t, expression, "(call (call somefunction) (call otherfunction (+ x y),z))")
@@ -314,7 +354,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
 	}
 
-	statements := Parse(tokens, &errorreport.ErrorReport{})
+	statements := parse(tokens)
 	functionStatement := statements[0].(*stmt.Function)
 	nameToken := functionStatement.Name
 	if nameToken.Lexeme != "do_something" {
@@ -347,7 +387,7 @@ func TestParseFunctionDeclarationParameters(t *testing.T) {
 		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
 	}
 
-	statements := Parse(tokens, &errorreport.ErrorReport{})
+	statements := parse(tokens)
 	functionStatement := statements[0].(*stmt.Function)
 	parameters := functionStatement.Params
 	if len(parameters) != 2 {

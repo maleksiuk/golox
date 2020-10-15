@@ -34,7 +34,7 @@ func main() {
 }
 
 func runFile(i interpreter.Interpreter, path string) error {
-	errorReport := errorreport.ErrorReport{}
+	errorReport := errorreport.NewErrorReport()
 
 	buf, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -55,7 +55,7 @@ func runFile(i interpreter.Interpreter, path string) error {
 }
 
 func runPrompt(i interpreter.Interpreter) {
-	errorReport := errorreport.ErrorReport{}
+	errorReport := errorreport.NewErrorReport()
 
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Print("> ")

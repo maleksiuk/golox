@@ -7,7 +7,19 @@ import (
 	"github.com/maleksiuk/golox/errorreport"
 	"github.com/maleksiuk/golox/parser"
 	"github.com/maleksiuk/golox/scanner"
+	"github.com/maleksiuk/golox/stmt"
 )
+
+func newMockErrorReport() errorreport.ErrorReport {
+	return errorreport.ErrorReport{Printer: errorreport.NewMockPrinter()}
+}
+
+func scanAndParse(code string) []stmt.Stmt {
+	errorReport := newMockErrorReport()
+
+	tokens := scanner.ScanTokens(code, &errorReport)
+	return parser.Parse(tokens, &errorReport)
+}
 
 func TestInterpretOrStatement(t *testing.T) {
 	code := `
@@ -16,11 +28,11 @@ func TestInterpretOrStatement(t *testing.T) {
 	  var shouldBeTrue = a + b < 3 or a + b > 13;
 	  var shouldBeFalse = a + b < 3 or a + b > 18;
 	`
-	tokens := scanner.ScanTokens(code, &errorreport.ErrorReport{})
-	statements := parser.Parse(tokens, &errorreport.ErrorReport{})
+	statements := scanAndParse(code)
 
+	errorReport := newMockErrorReport()
 	interpreter := NewInterpreter()
-	interpreter.Interpret(statements, &errorreport.ErrorReport{})
+	interpreter.Interpret(statements, &errorReport)
 	shouldBeTrue := interpreter.GetVariableValue("shouldBeTrue").(bool)
 	shouldBeFalse := interpreter.GetVariableValue("shouldBeFalse").(bool)
 
@@ -40,11 +52,11 @@ func TestInterpretAndStatement(t *testing.T) {
 	  var shouldBeTrue = a + b >= 0 and b > -10;
 	  var shouldBeFalse = a + b >= 3 and b > 100;
 	`
-	tokens := scanner.ScanTokens(code, &errorreport.ErrorReport{})
-	statements := parser.Parse(tokens, &errorreport.ErrorReport{})
+	statements := scanAndParse(code)
 
+	errorReport := newMockErrorReport()
 	interpreter := NewInterpreter()
-	interpreter.Interpret(statements, &errorreport.ErrorReport{})
+	interpreter.Interpret(statements, &errorReport)
 	shouldBeTrue := interpreter.GetVariableValue("shouldBeTrue").(bool)
 	shouldBeFalse := interpreter.GetVariableValue("shouldBeFalse").(bool)
 
@@ -61,11 +73,11 @@ func TestInterpretArithmetic(t *testing.T) {
 	code := `
 	  var result = 1 + 12.6 / 3 * 8;
 	`
-	tokens := scanner.ScanTokens(code, &errorreport.ErrorReport{})
-	statements := parser.Parse(tokens, &errorreport.ErrorReport{})
+	statements := scanAndParse(code)
 
+	errorReport := newMockErrorReport()
 	interpreter := NewInterpreter()
-	interpreter.Interpret(statements, &errorreport.ErrorReport{})
+	interpreter.Interpret(statements, &errorReport)
 	result := interpreter.GetVariableValue("result").(float64)
 
 	var expected = 34.6
@@ -81,11 +93,11 @@ func TestInterpretWhile(t *testing.T) {
 		  result = result + 1;
 	  }
 	`
-	tokens := scanner.ScanTokens(code, &errorreport.ErrorReport{})
-	statements := parser.Parse(tokens, &errorreport.ErrorReport{})
+	statements := scanAndParse(code)
 
+	errorReport := newMockErrorReport()
 	interpreter := NewInterpreter()
-	interpreter.Interpret(statements, &errorreport.ErrorReport{})
+	interpreter.Interpret(statements, &errorReport)
 	result := interpreter.GetVariableValue("result").(float64)
 
 	var expected = 5.0
@@ -101,11 +113,11 @@ func TestInterpretFor(t *testing.T) {
 		  result = i;
 	  }
 	`
-	tokens := scanner.ScanTokens(code, &errorreport.ErrorReport{})
-	statements := parser.Parse(tokens, &errorreport.ErrorReport{})
+	statements := scanAndParse(code)
 
+	errorReport := newMockErrorReport()
 	interpreter := NewInterpreter()
-	interpreter.Interpret(statements, &errorreport.ErrorReport{})
+	interpreter.Interpret(statements, &errorReport)
 	result := interpreter.GetVariableValue("result").(float64)
 
 	var expected = 4.0
@@ -118,13 +130,13 @@ func TestClockFunction(t *testing.T) {
 	code := `
 	var result = clock();
   `
-	tokens := scanner.ScanTokens(code, &errorreport.ErrorReport{})
-	statements := parser.Parse(tokens, &errorreport.ErrorReport{})
+	statements := scanAndParse(code)
 
 	secondsSinceEpoch := float64(time.Now().Unix())
 
+	errorReport := newMockErrorReport()
 	interpreter := NewInterpreter()
-	interpreter.Interpret(statements, &errorreport.ErrorReport{})
+	interpreter.Interpret(statements, &errorReport)
 	result := interpreter.GetVariableValue("result").(float64)
 
 	timeDiff := result - secondsSinceEpoch
