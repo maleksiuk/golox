@@ -340,6 +340,30 @@ func TestParseFunctionCalls(t *testing.T) {
 	assertAST(t, expression, "(call (call somefunction) (call otherfunction (+ x y),z))")
 }
 
+func TestFunctionCallArgumentLengthError(t *testing.T) {
+	tokens := make([]toks.Token, 6+2*255)
+	tokens[0] = toks.Token{TokenType: toks.Identifier, Lexeme: "somefunction", Literal: nil, Line: 0}
+	tokens[1] = toks.Token{TokenType: toks.LeftParen, Lexeme: "(", Literal: nil, Line: 0}
+	tokens[2] = toks.Token{TokenType: toks.Identifier, Lexeme: "x", Literal: nil, Line: 0}
+
+	i := 3
+	for ; i < 2+2*255; i += 2 {
+		tokens[i] = toks.Token{TokenType: toks.Comma, Lexeme: ",", Literal: nil, Line: 0}
+		tokens[i+1] = toks.Token{TokenType: toks.Identifier, Lexeme: "x", Literal: nil, Line: 0}
+	}
+
+	tokens[i] = toks.Token{TokenType: toks.RightParen, Lexeme: ")", Literal: nil, Line: 0}
+	tokens[i+1] = toks.Token{TokenType: toks.Semicolon, Lexeme: ";", Literal: nil, Line: 0}
+	tokens[i+2] = toks.Token{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0}
+
+	errorReport := newMockErrorReport()
+	statements := Parse(tokens, &errorReport)
+	expression := statements[0].(*stmt.Expression).Expression
+
+	assertSingleError(t, errorReport, "[line 0] Error at 'x': Cannot have more than 255 arguments.\n", true, false)
+	assertAST(t, expression, "(call somefunction x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x)")
+}
+
 func TestParseFunctionDeclaration(t *testing.T) {
 	tokens := []toks.Token{
 		{TokenType: toks.Fun, Lexeme: "fun", Literal: nil, Line: 0},

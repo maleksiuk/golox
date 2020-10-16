@@ -546,9 +546,9 @@ func (p *parser) finishCall(callee expr.Expr) (expr.Expr, error) {
 		matchedComma := true
 
 		for matchedComma {
+			// the book implementation also has >= here even though the error message implies >
 			if len(args) >= 255 {
-				// TODO: This is one that should just be printed out here without stopping parsing.
-				return nil, newParseError(p.peek(), "Cannot have more than 255 arguments.")
+				p.handleError(p.peek(), "Cannot have more than 255 arguments.")
 			}
 
 			arg, err := p.expression()
