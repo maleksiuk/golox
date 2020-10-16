@@ -364,6 +364,25 @@ func TestFunctionCallArgumentLengthError(t *testing.T) {
 	assertAST(t, expression, "(call somefunction x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x)")
 }
 
+func TestFunctionCallNoRightParenError(t *testing.T) {
+	tokens := make([]toks.Token, 5)
+	tokens[0] = toks.Token{TokenType: toks.Identifier, Lexeme: "somefunction", Literal: nil, Line: 0}
+	tokens[1] = toks.Token{TokenType: toks.LeftParen, Lexeme: "(", Literal: nil, Line: 0}
+	tokens[2] = toks.Token{TokenType: toks.Identifier, Lexeme: "x", Literal: nil, Line: 0}
+	tokens[3] = toks.Token{TokenType: toks.Semicolon, Lexeme: ";", Literal: nil, Line: 0}
+	tokens[4] = toks.Token{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0}
+
+	errorReport := newMockErrorReport()
+	statements := Parse(tokens, &errorReport)
+
+	// TODO: is this really what we want? How will the interpreter handle this?
+	if len(statements) != 1 || statements[0] != nil {
+		t.Errorf("Expected the parser to return a single nil statement.")
+	}
+
+	assertSingleError(t, errorReport, "[line 0] Error at ';': Expected ')' to finish function call\n", true, false)
+}
+
 func TestParseFunctionDeclaration(t *testing.T) {
 	tokens := []toks.Token{
 		{TokenType: toks.Fun, Lexeme: "fun", Literal: nil, Line: 0},

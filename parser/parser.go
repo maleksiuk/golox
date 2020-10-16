@@ -112,7 +112,9 @@ func (p *parser) declaration() (stmt.Stmt, error) {
 			if !ok {
 				panic(e)
 			}
-			// TODO: synchronize (https://craftinginterpreters.com/statements-and-state.html#parsing-variables)
+
+			p.synchronize()
+			return
 		}
 	}()
 
@@ -649,4 +651,21 @@ func (p *parser) peek() toks.Token {
 
 func (p *parser) isAtEnd() bool {
 	return p.peek().TokenType == toks.EOF
+}
+
+func (p *parser) synchronize() {
+	p.advance()
+
+	for !p.isAtEnd() {
+		if p.previous().TokenType == toks.Semicolon {
+			return
+		}
+
+		switch p.peek().TokenType {
+		case toks.Class, toks.Fun, toks.Var, toks.For, toks.If, toks.While, toks.Print, toks.Return:
+			return
+		}
+
+		p.advance()
+	}
 }
