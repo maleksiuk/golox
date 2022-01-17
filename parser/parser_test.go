@@ -144,6 +144,20 @@ func TestInvalidAssignmentTargetError(t *testing.T) {
 	assertAST(t, expression, "hello")
 }
 
+func TestNoSemicolonAfterVariableAssignmentError(t *testing.T) {
+	tokens := []toks.Token{
+		{TokenType: toks.Identifier, Lexeme: "a", Literal: nil, Line: 0},
+		{TokenType: toks.Equal, Lexeme: "=", Literal: nil, Line: 0},
+		{TokenType: toks.Number, Lexeme: "55", Literal: 55, Line: 0},
+		{TokenType: toks.EOF, Lexeme: "", Literal: nil, Line: 0},
+	}
+
+	errorReport := newMockErrorReport()
+	Parse(tokens, &errorReport)
+
+	assertSingleError(t, errorReport, "[line 0] Error at end: Expect ';' after value\n", true, false)
+}
+
 func TestParseLogicalOperators(t *testing.T) {
 	// hello == 55 or true and false and something
 	tokens := []toks.Token{

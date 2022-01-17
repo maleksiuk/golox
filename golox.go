@@ -74,5 +74,10 @@ func run(i interpreter.Interpreter, line string, errorReport *errorreport.ErrorR
 	tokens := scanner.ScanTokens(line, errorReport)
 	statements := parser.Parse(tokens, errorReport)
 
+	// Stop if there was a syntax error.
+	if errorReport.HadError {
+		return
+	}
+
 	i.Interpret(statements, errorReport)
 }
